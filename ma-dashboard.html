@@ -137,7 +137,7 @@ html, body {
 
 .station-more {
   font-family: "Roboto Mono", "Courier New", monospace; font-size: 13px; color: var(--text-secondary);
-  padding: 10px 12px 8px; cursor: pointer; border-bottom: 3px solid transparent;
+  padding: 10px 12px 8px; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap;
   -webkit-flex-shrink: 0; flex-shrink: 0; margin-right: 6px; -webkit-user-select: none; user-select: none;
 }
 .station-more.on { color: var(--accent); border-bottom-color: var(--accent); }
@@ -196,7 +196,7 @@ html, body {
 }
 .theme-switch:active { color: var(--accent); }
 
-/* Akzentfarben-Umschalter */
+/* Accent color switch */
 .accent-switch {
   width: 20px; height: 20px; border-radius: 50%; margin-left: 10px;
   border: 1px solid var(--border); cursor: pointer; -webkit-flex-shrink: 0; flex-shrink: 0;
@@ -214,6 +214,21 @@ html, body {
 }
 .accent-menu .swatch.on { border-color: var(--text); }
 
+/* Settings switch + panel */
+.settings-switch {
+  display: -webkit-flex; display: flex; -webkit-flex-shrink: 0; flex-shrink: 0;
+  margin-left: 10px; -webkit-align-items: center; align-items: center;
+  font-size: 18px; line-height: 1; cursor: pointer; color: var(--text-secondary);
+  -webkit-user-select: none; user-select: none; padding: 5px 4px;
+}
+.settings-switch:active { color: var(--accent); }
+.settings-menu {
+  position: absolute; top: 68px; right: 16px; z-index: 25;
+  background: var(--bg-elevated-2); border-bottom: 1px solid var(--border);
+  padding: 14px 16px; display: none; max-width: 320px;
+}
+.settings-menu .menu-head:not(:first-child) { margin-top: 14px; }
+
 /* Connection indicator light, far right in the header */
 .link { width: 9px; height: 9px; border-radius: 5px; background: var(--danger); margin-left: 14px; -webkit-flex-shrink: 0; flex-shrink: 0; }
 .link.on { background: var(--success); }
@@ -225,9 +240,41 @@ html, body {
    they're really the same two-column shell with a different right pane. */
 .pages { -webkit-flex: 1; flex: 1; display: -webkit-flex; display: flex; min-height: 0; }
 
-#pageLibSearch { -webkit-flex: 1; flex: 1; display: -webkit-flex; display: flex; min-height: 0; }
-.left { width: 430px; padding: 20px; border-right: 1px solid var(--border); display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; }
+/* Heading shown at the top of every page (Now Playing / Radio / Library /
+   Search), left-aligned with a thin border-bottom divider - always its
+   own flex item, never inside the padded/scrollable content area below
+   it, so there's a guaranteed gap and it can never be scrolled under or
+   covered by that page's own content. #pageNow additionally gets an
+   opaque background (see further down) since it's the one page with a
+   background-image behind everything else. */
+.page-title {
+  font-family: "Roboto Mono", "Courier New", monospace; font-size: 20px; letter-spacing: 0.4px;
+  color: var(--text); padding: 16px 20px 10px; border-bottom: 1px solid var(--border);
+  -webkit-flex-shrink: 0; flex-shrink: 0;
+}
+.page-title .pt-dim { color: var(--text-secondary); }
+
+#pageLibSearch { -webkit-flex: 1; flex: 1; display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; min-height: 0; }
+.libsearch-row { -webkit-flex: 1; flex: 1; display: -webkit-flex; display: flex; min-height: 0; }
+.left { width: 230px; padding: 16px; border-right: 1px solid var(--border); display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; }
 .right { -webkit-flex: 1; flex: 1; display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; min-width: 0; padding: 20px; }
+
+/* Compact playback controls used inside .left (Library/Search) - the
+   full-size versions of the same .cover/.title/.btn/... classes live in
+   #pageNow (see above); this is the third and smallest sizing tier, so
+   the two-column list panes get most of the width. */
+.left .cover { width: 110px; height: 110px; margin: 0 auto 10px; }
+.left .cover .ph { font-size: 22px; line-height: 110px; }
+.left .title { font-size: 15px; line-height: 1.2; margin-bottom: 4px; max-height: 36px; }
+.left .heart { width: 34px; height: 34px; margin: -4px -6px 0 4px; }
+.left .heart span { font-size: 19px; line-height: 19px; }
+.left .sub { font-size: 12px; margin-bottom: 2px; }
+.left .sub.album { font-size: 11px; margin-bottom: 10px; }
+.left .transport { margin: 10px 0 8px; }
+.left .btn { width: 38px; height: 38px; border-radius: 19px; margin: 0 4px; }
+.left .btn.big { width: 48px; height: 48px; border-radius: 24px; }
+.left .toggles { margin-bottom: 10px; }
+.left .tgl { font-size: 10px; padding: 5px 8px; margin: 0 3px; }
 
 /* ---------- Now Playing (full-screen page) ----------
    Reuses the same .cover/.title/.transport/... classes as the compact
@@ -235,10 +282,21 @@ html, body {
    element ids) - only the sizing is bumped via these descendant rules, so
    there's one single CSS source of truth for how each control looks. */
 #pageNow {
-  -webkit-flex: 1; flex: 1; min-height: 0; padding: 30px 20px; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  -webkit-flex: 1; flex: 1; min-height: 0;
+  display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column;
+  background-color: var(--bg); background-repeat: no-repeat; background-size: cover; background-position: center;
+}
+/* Solid panel, same as the header bar, so the title stays legible over
+   the artwork-derived gradient and (being flex-shrink:0, outside the
+   scrolling area below) never scrolls out of view or gets covered by
+   the cover/lyrics content - same pattern as the Library/Search title
+   sitting outside their own scrolling lists. */
+#pageNow .page-title { background: var(--bg-elevated); -webkit-flex-shrink: 0; flex-shrink: 0; }
+#pageNow .now-content {
+  -webkit-flex: 1; flex: 1; min-height: 0; width: 100%; padding: 10px 20px 30px;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
   display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column;
   -webkit-align-items: center; align-items: center; -webkit-justify-content: center; justify-content: center;
-  background-color: var(--bg); background-repeat: no-repeat; background-size: cover; background-position: center;
 }
 #pageNow .now-inner { width: 100%; max-width: 460px; -webkit-flex-shrink: 0; flex-shrink: 0; }
 #pageNow .cover { width: 320px; height: 320px; max-width: 66vw; max-height: 66vw; }
@@ -253,7 +311,11 @@ html, body {
 }
 
 /* ---------- Radio (favorite stations grid, grouped by country) ---------- */
-#pageRadio { -webkit-flex: 1; flex: 1; min-height: 0; padding: 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+#pageRadio {
+  -webkit-flex: 1; flex: 1; min-height: 0;
+  display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column;
+}
+.radio-page-body { -webkit-flex: 1; flex: 1; min-height: 0; padding: 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .radio-grid { display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap; flex-wrap: wrap; margin: 0 -6px 14px; }
 .radio-tile {
   width: 160px; height: 160px; margin: 6px; position: relative; overflow: hidden; cursor: pointer;
@@ -629,10 +691,17 @@ html, body {
   <div class="top" id="topBar" style="position:relative;z-index:26;">
     <div class="brand">Music Assistant</div>
     <div class="stations" id="stations"></div>
-    <div class="station-more" id="stationMore">&#10095;</div>
+    <div class="station-more" id="stationMore">Quick Actions&nbsp;&#10095;</div>
     <div class="theme-switch" id="themeSwitch"></div>
     <div class="accent-switch" id="accentSwitch"></div>
+    <div class="settings-switch" id="settingsSwitch">&#9881;</div>
     <div class="link" id="link"></div>
+  </div>
+
+  <div class="settings-menu" id="settingsMenu" style="display:none;">
+    <div class="menu-head" data-i18n="settings.title">Settings</div>
+    <div class="menu-head" data-i18n="settings.defaultSource">Default Music Source (Library &amp; Search)</div>
+    <div class="filters" id="settingsSources"></div>
   </div>
 
   <div class="station-menu" id="stationMenu" style="display:none;">
@@ -660,6 +729,8 @@ html, body {
   <div class="pages">
 
     <div id="pageNow" style="display:none;">
+      <div class="page-title" id="nowPageTitle">Now Playing</div>
+      <div class="now-content">
       <div class="now-inner">
         <div class="cover" id="coverBig"><div class="ph show">&#9835;</div></div>
         <div class="titlerow">
@@ -702,13 +773,21 @@ html, body {
         </div>
       </div>
       <div class="list" id="lyricsBoxBig"></div>
+      </div>
     </div>
 
     <div id="pageRadio" style="display:none;">
-      <div id="radioGrid"><div class="hint" data-i18n="common.loading">Loading …</div></div>
+      <div class="page-title" data-i18n="pagetitle.radio">Radio</div>
+      <div class="radio-page-body">
+        <div id="radioGrid"><div class="hint" data-i18n="common.loading">Loading …</div></div>
+      </div>
     </div>
 
     <div id="pageLibSearch" style="display:none;">
+
+      <div class="page-title" id="libSearchPageTitle">Library</div>
+
+      <div class="libsearch-row">
 
       <div class="left">
         <div class="cover" id="cover"><div class="ph show">&#9835;</div></div>
@@ -786,6 +865,8 @@ html, body {
 
       </div>
 
+      </div>
+
     </div>
 
   </div>
@@ -842,7 +923,7 @@ html, body {
    pageshow for weeks - without the timer, the update check would be
    effectively dead.
    ================================================================== */
-var APP_VERSION = '2026-08-30.1';
+var APP_VERSION = '2026-08-30.3';
 var UPDATE_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 
 /* ==================================================================
@@ -1023,7 +1104,15 @@ var STRINGS = {
     "radio.empty": "No favorite radio stations yet.",
     "radio.otherGroup": "Other",
     "lib.queue": "Queue",
-    "source.all": "All sources"
+    "source.all": "All sources",
+    "pagetitle.now": "Now Playing",
+    "pagetitle.radio": "Radio",
+    "pagetitle.library": "Library",
+    "pagetitle.search": "Search",
+    "settings.title": "Settings",
+    "settings.defaultSource": "Default Music Source (Library & Search)",
+    "settings.noDefaultSource": "No default (show all)",
+    "settings.noSources": "No music providers found."
 };
 
 function t(key, vars) {
@@ -1122,6 +1211,7 @@ if (window.matchMedia) {
    script (same FOUC reasoning as the theme) and are available here as
    global functions. */
 var accentMenuOpen = false;
+var settingsMenuOpen = false;
 
 function currentAccent() {
   try {
@@ -1166,7 +1256,107 @@ renderAccentSwatches();
 $('accentSwitch').onclick = function () {
   accentMenuOpen = !accentMenuOpen;
   $('accentMenu').style.display = accentMenuOpen ? 'block' : 'none';
-  if (accentMenuOpen) { stationMenuOpen = false; $('stationMenu').style.display = 'none'; $('stationMore').className = 'station-more'; groupMenuOpen = false; $('groupMenu').style.display = 'none'; }
+  if (accentMenuOpen) {
+    stationMenuOpen = false; $('stationMenu').style.display = 'none'; $('stationMore').className = 'station-more';
+    groupMenuOpen = false; $('groupMenu').style.display = 'none';
+    settingsMenuOpen = false; $('settingsMenu').style.display = 'none';
+  }
+};
+
+/* ==================================================================
+   SETTINGS
+   ==================================================================
+   Only one setting so far: a default Music Source filter, applied to
+   both Library and Search when either loads (see librarySourceFilter/
+   searchSourceFilter below). Persisted in localStorage, so it's
+   per-device only - Music Assistant's server API has no generic
+   settings store a third-party client can write arbitrary data to
+   (config/core/* and config/providers/* are validated per built-in
+   subsystem/provider, config/players/* is per-player), so there's no
+   safe way to sync this across devices today. */
+var DEFAULT_SOURCE_KEY = 'ma-dashboard-default-source';
+
+function getDefaultSource() {
+  try {
+    var saved = localStorage.getItem(DEFAULT_SOURCE_KEY);
+    if (saved) { return saved; }
+  } catch (e) { /* private browsing mode or similar - ignore */ }
+  return 'all';
+}
+
+function setDefaultSource(domain) {
+  try {
+    if (domain === 'all') { localStorage.removeItem(DEFAULT_SOURCE_KEY); }
+    else { localStorage.setItem(DEFAULT_SOURCE_KEY, domain); }
+  } catch (e) { /* fine either way */ }
+}
+
+/* config/providers (provider_type: 'music') lists the server's actually
+   configured/enabled music providers - used instead of hardcoding a
+   provider list, so this reflects whatever the user has set up. */
+function loadMusicSources(cb) {
+  send('config/providers', { provider_type: 'music' }, function (err, list) {
+    if (err) { cb(err, null); return; }
+    var seen = {}, out = [];
+    for (var i = 0; i < list.length; i++) {
+      var p = list[i];
+      if (!p || p.enabled === false || !p.domain || seen[p.domain]) { continue; }
+      seen[p.domain] = true;
+      out.push(p.domain);
+    }
+    out.sort(function (a, b) { return sourceLabel(a) < sourceLabel(b) ? -1 : 1; });
+    cb(null, out);
+  });
+}
+
+function renderSettingsMenu() {
+  var box = $('settingsSources');
+  box.innerHTML = '<div class="hint">' + t('common.loading') + '</div>';
+  loadMusicSources(function (err, domains) {
+    if (err) { box.innerHTML = '<div class="hint">' + t('common.loadError', { err: err }) + '</div>'; return; }
+    box.innerHTML = '';
+    var current = getDefaultSource();
+    var allEl = document.createElement('div');
+    allEl.className = 'filt' + (current === 'all' ? ' on' : '');
+    allEl.appendChild(document.createTextNode(t('settings.noDefaultSource')));
+    allEl.onclick = function () { chooseDefaultSource('all'); };
+    box.appendChild(allEl);
+    for (var i = 0; i < domains.length; i++) {
+      (function (d) {
+        var el = document.createElement('div');
+        el.className = 'filt' + (d === current ? ' on' : '');
+        el.appendChild(document.createTextNode(sourceLabel(d)));
+        el.onclick = function () { chooseDefaultSource(d); };
+        box.appendChild(el);
+      })(domains[i]);
+    }
+    if (!domains.length) {
+      var hint = document.createElement('div');
+      hint.className = 'hint';
+      setText(hint, t('settings.noSources'));
+      box.appendChild(hint);
+    }
+  });
+}
+
+function chooseDefaultSource(domain) {
+  setDefaultSource(domain);
+  librarySourceFilter = domain;
+  searchSourceFilter = domain;
+  renderSettingsMenu();
+  if (currentTab === 'library' && currentLibType !== 'queue') { loadLibrary(currentLibType); }
+  if (currentTab === 'search') { renderResults(lastResults); }
+}
+
+$('settingsSwitch').onclick = function () {
+  settingsMenuOpen = !settingsMenuOpen;
+  $('settingsMenu').style.display = settingsMenuOpen ? 'block' : 'none';
+  if (settingsMenuOpen) {
+    stationMenuOpen = false; $('stationMenu').style.display = 'none'; $('stationMore').className = 'station-more';
+    groupMenuOpen = false; $('groupMenu').style.display = 'none';
+    accentMenuOpen = false; $('accentMenu').style.display = 'none';
+    renderSettingsMenu();
+  }
 };
 
 function base() {
@@ -1731,6 +1921,8 @@ function buildStations() {
           $('stationMore').className = 'station-more';
           accentMenuOpen = false;
           $('accentMenu').style.display = 'none';
+          settingsMenuOpen = false;
+          $('settingsMenu').style.display = 'none';
           $('groupMenu').style.display = groupMenuOpen ? 'block' : 'none';
           if (groupMenuOpen) { renderGroupMenu(); positionGroupMenu(el); }
         } else {
@@ -1925,6 +2117,35 @@ function clearNowGradient() {
   if (page) { page.style.backgroundImage = 'none'; }
 }
 
+/* Page heading for Now Playing: "Now Playing" alone when nothing's
+   loaded, otherwise "Now Playing - {source} - {name}" - source is
+   "Radio" for a radio stream or the streaming provider's label for a
+   track (via itemProviderDomains()/sourceLabel(), see the Music Source
+   filter section), name is "{track} by {artist}" for a track or just
+   the station name for radio. Either segment is skipped gracefully if
+   it can't be determined (e.g. a queue-less external source). */
+function renderNowPageTitle(rawTitle, artist, mi) {
+  var el = $('nowPageTitle');
+  if (!el) { return; }
+  el.innerHTML = '';
+  el.appendChild(document.createTextNode(t('pagetitle.now')));
+  if (!rawTitle) { return; }
+  var isRadio = !!(mi && mi.media_type === 'radio');
+  var source = null;
+  if (isRadio) {
+    source = t('media.radio');
+  } else if (mi) {
+    var domains = itemProviderDomains(mi);
+    if (domains.length) { source = sourceLabel(domains[0]); }
+  }
+  var name = (artist && !isRadio) ? (rawTitle + ' by ' + artist) : rawTitle;
+  var extra = source ? (source + ' - ' + name) : name;
+  var dim = document.createElement('span');
+  dim.className = 'pt-dim';
+  dim.appendChild(document.createTextNode(' - ' + extra));
+  el.appendChild(dim);
+}
+
 function renderNow() {
   var p = activePlayer() || {};
   var q = activeQueue();
@@ -1932,9 +2153,10 @@ function renderNow() {
   var item = (q && q.current_item) || null;
   var mi = (item && item.media_item) || null;
 
-  var title = media.title || (item && item.name) || '';
+  var rawTitle = media.title || (item && item.name) || '';
   var artist = media.artist || artistsOf(mi) || '';
   var albumName = media.album || (mi && mi.album && mi.album.name) || '';
+  var title = rawTitle;
 
   if (!title) {
     title = (p.powered === false) ? t('now.off') : t('now.nothingPlaying');
@@ -1942,6 +2164,7 @@ function renderNow() {
   npText('title', title);
   npText('artist', artist);
   npText('album', albumName);
+  renderNowPageTitle(rawTitle, artist, mi);
 
   /* Make artist/album tappable when we have a real media object */
   wireNowNav(mi);
@@ -3318,7 +3541,7 @@ var SEARCH_SORTS = [
   { k: 'year',      lKey: 'sort.year' }
 ];
 var searchSortMode = 'relevance';
-var searchSourceFilter = 'all';
+var searchSourceFilter = getDefaultSource();
 
 function buildFilters() {
   var box = $('filters');
@@ -3535,7 +3758,7 @@ var LIB_TYPES = [
 ];
 var currentLibType = 'playlist';
 var libFavOnly = false;
-var librarySourceFilter = 'all';
+var librarySourceFilter = getDefaultSource();
 var SORT_MODES = [
   { k: 'name', lKey: 'sort.name' },
   { k: 'year', lKey: 'sort.year' }
@@ -3674,11 +3897,22 @@ function loadLibrary(typeKey) {
    RADIO (favorite stations grid, grouped by country)
    ================================================================== */
 
+/* Manual overrides for stations whose provider doesn't supply any
+   country metadata at all, keyed by exact station name. Extend this
+   list for any other station that keeps landing in "Other". */
+var RADIO_COUNTRY_OVERRIDES = {
+  '2SER 107.3': 'Australia',
+  'ABC Jazz HLS': 'Australia',
+  'TrustFM': 'Australia',
+  'FBi Radio - Sydney - 94.5 FM (MP3)': 'Australia'
+};
+
 /* Best-effort: not every radio provider supplies a country field (MA
    doesn't guarantee one), so this simply returns null when there's
    nothing usable and loadRadioGrid() buckets those into one trailing
    "Other" group rather than losing the grouping feature entirely. */
 function radioCountry(it) {
+  if (it.name && RADIO_COUNTRY_OVERRIDES[it.name]) { return RADIO_COUNTRY_OVERRIDES[it.name]; }
   var c = (it.metadata && it.metadata.country) || it.country || null;
   return c ? String(c) : null;
 }
@@ -3819,6 +4053,7 @@ function showLibSearchSide(which) {
   searchPane.style.display = (which === 'search') ? 'flex' : 'none';
   libPane.style.display = (which === 'library') ? '-webkit-flex' : 'none';
   libPane.style.display = (which === 'library') ? 'flex' : 'none';
+  setText($('libSearchPageTitle'), which === 'search' ? t('pagetitle.search') : t('pagetitle.library'));
 }
 
 function enterDetail() {
@@ -4040,6 +4275,8 @@ $('stationMore').onclick = function () {
     $('groupMenu').style.display = 'none';
     accentMenuOpen = false;
     $('accentMenu').style.display = 'none';
+    settingsMenuOpen = false;
+    $('settingsMenu').style.display = 'none';
   }
 };
 
@@ -4100,10 +4337,11 @@ $('qaSleep').onclick = function () {
 };
 
 document.addEventListener('click', function (e) {
-  if (!stationMenuOpen && !groupMenuOpen && !accentMenuOpen) { return; }
+  if (!stationMenuOpen && !groupMenuOpen && !accentMenuOpen && !settingsMenuOpen) { return; }
   var n = e.target;
   while (n && n !== document.body) {
-    if (n.id === 'stationMenu' || n.id === 'stationMore' || n.id === 'groupMenu' || n.id === 'accentMenu' || n.id === 'accentSwitch') { return; }
+    if (n.id === 'stationMenu' || n.id === 'stationMore' || n.id === 'groupMenu' || n.id === 'accentMenu' || n.id === 'accentSwitch' ||
+        n.id === 'settingsMenu' || n.id === 'settingsSwitch') { return; }
     if (n.className && typeof n.className === 'string' && (' ' + n.className + ' ').indexOf(' station ') >= 0) { return; }
     n = n.parentNode;
   }
@@ -4112,6 +4350,8 @@ document.addEventListener('click', function (e) {
   $('groupMenu').style.display = 'none';
   accentMenuOpen = false;
   $('accentMenu').style.display = 'none';
+  settingsMenuOpen = false;
+  $('settingsMenu').style.display = 'none';
 }, false);
 
 /* ==================================================================
