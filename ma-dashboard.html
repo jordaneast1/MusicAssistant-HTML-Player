@@ -351,6 +351,33 @@ html, body {
 .footer .tab.on { color: var(--accent); border-top-color: var(--accent); }
 .footer .tab svg { display: block; }
 
+/* ---------- Queue panel ----------
+   One shared component, toggled from both the Library page
+   (#libQueueToggle) and the Now Playing page (#npQueueBig) - see
+   toggleQueuePanel()/openQueuePanel()/closeQueuePanel(). Fixed between
+   the header and footer (their heights are hardcoded to match: 68px/
+   60px), slides in from the right over whichever page is currently
+   showing rather than replacing that page's own content. */
+.queue-panel {
+  position: fixed; top: 68px; bottom: 60px; right: 0; width: 360px; max-width: 90vw; z-index: 22;
+  background: var(--bg-elevated); border-left: 1px solid var(--border);
+  display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column;
+  -webkit-transform: translateX(100%); transform: translateX(100%);
+  -webkit-transition: -webkit-transform 0.3s ease; transition: transform 0.3s ease;
+}
+.queue-panel.open { -webkit-transform: translateX(0); transform: translateX(0); }
+.queue-panel-head {
+  display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center;
+  padding: 16px 16px 10px; border-bottom: 1px solid var(--border); -webkit-flex-shrink: 0; flex-shrink: 0;
+}
+.queue-panel-title {
+  -webkit-flex: 1; flex: 1; font-family: "Roboto Mono", "Courier New", monospace; font-size: 18px; color: var(--text);
+}
+.queue-panel-close { font-size: 26px; line-height: 1; color: var(--text-secondary); cursor: pointer; padding: 0 6px; }
+.queue-panel-close:active { color: var(--accent); }
+.queue-panel .searchbar { margin: 12px 16px 0; -webkit-flex-shrink: 0; flex-shrink: 0; }
+.queue-panel .list { min-height: 0; padding: 0 16px 16px; }
+
 /* ---------- Now Playing ---------- */
 .cover {
   width: 220px; height: 220px; background: var(--surface); border: 1px solid var(--border);
@@ -473,6 +500,29 @@ html, body {
 .filt.fav { border-color: var(--fav-border); color: var(--fav); }
 .filt.fav.on { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
 
+/* Groups the Filter/Sort/Source chip rows in Library and Search into
+   clearly separate sections - a thin divider plus a small label above
+   each, so the three kinds of chips don't read as one long run. */
+.filter-section { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.filter-section:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.filter-label {
+  font-family: "Roboto Mono", "Courier New", monospace; font-size: 11px; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;
+}
+
+/* Queue toggle button - opens the shared #queuePanel (see further down).
+   Deliberately its own bordered button, not a .filt chip, and placed
+   above the Filter/Sort/Source sections so it reads as a separate
+   action rather than another filter. */
+.queue-toggle {
+  display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center;
+  -webkit-flex-shrink: 0; flex-shrink: 0; -webkit-user-select: none; user-select: none; cursor: pointer;
+  font-family: "Roboto Mono", "Courier New", monospace; font-size: 12px; letter-spacing: 1.3px; text-transform: uppercase;
+  color: var(--text-secondary); border: 1px solid var(--border); padding: 9px 14px; margin-bottom: 14px;
+}
+.queue-toggle .qt-icon { margin-right: 8px; font-size: 16px; line-height: 1; }
+.queue-toggle.on { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+
 /* Back bar above the results list (artist > album > …) */
 .crumbs {
   display: none; -webkit-align-items: center; align-items: center;
@@ -579,6 +629,10 @@ html, body {
 .sheet .sep {
   font-family: "Roboto Mono", "Courier New", monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
   color: var(--text-muted); padding: 14px 0 8px;
+}
+.meta-json {
+  font-family: "Roboto Mono", "Courier New", monospace; font-size: 12px; line-height: 1.5;
+  color: var(--text-dim); white-space: pre-wrap; word-break: break-word; padding: 10px;
 }
 
 /* ---------- Toast ---------- */
@@ -738,6 +792,7 @@ html, body {
           <div class="heart hide" id="npAddBig"><span>&#43;</span></div>
           <div class="heart hide" id="npHeartBig"><span>&#9825;</span></div>
           <div class="heart hide" id="npLyricsBig"><span>Aa</span></div>
+          <div class="heart" id="npQueueBig"><span>&#9776;</span></div>
         </div>
         <div class="sub" id="artistBig"></div>
         <div class="sub album" id="albumBig"></div>
@@ -839,8 +894,18 @@ html, body {
               <input type="text" id="q" placeholder="Track, artist, album, playlist" data-i18n-placeholder="search.placeholder" autocorrect="off" autocapitalize="off">
               <button id="bSearch" data-i18n="search.button">Search</button>
             </div>
-            <div class="filters" id="filters"></div>
-            <div class="filters" id="sourceFilters"></div>
+            <div class="filter-section">
+              <div class="filter-label" data-i18n="filter.sectionFilter">Filter</div>
+              <div class="filters" id="filters"></div>
+            </div>
+            <div class="filter-section">
+              <div class="filter-label" data-i18n="filter.sectionSort">Sort</div>
+              <div class="filters" id="sortFilters"></div>
+            </div>
+            <div class="filter-section">
+              <div class="filter-label" data-i18n="filter.sectionSource">Source</div>
+              <div class="filters" id="sourceFilters"></div>
+            </div>
           </div>
           <div class="crumbs" id="crumbs">
             <div class="back" id="bBack" data-i18n="nav.back">&#8592; Back</div>
@@ -853,14 +918,22 @@ html, body {
         </div>
 
         <div id="paneLibrary" style="display:none;-webkit-flex:1;flex:1;min-height:0;-webkit-flex-direction:column;flex-direction:column;">
-          <div class="filters" id="libFilters"></div>
-          <div class="filters" id="libSourceFilters"></div>
-          <div class="searchbar" id="queueToolbar" style="display:none;">
-            <button id="bQueueReload" style="margin-left:0" data-i18n="queue.reload">Refresh</button>
-            <button id="bQueueClear" style="background:var(--surface);color:var(--text-secondary)" data-i18n="queue.clear">Clear</button>
+          <div class="queue-toggle" id="libQueueToggle">
+            <span class="qt-icon">&#9776;</span><span data-i18n="lib.queue">Queue</span>
+          </div>
+          <div class="filter-section">
+            <div class="filter-label" data-i18n="filter.sectionFilter">Filter</div>
+            <div class="filters" id="libFilters"></div>
+          </div>
+          <div class="filter-section">
+            <div class="filter-label" data-i18n="filter.sectionSort">Sort</div>
+            <div class="filters" id="libSortFilters"></div>
+          </div>
+          <div class="filter-section">
+            <div class="filter-label" data-i18n="filter.sectionSource">Source</div>
+            <div class="filters" id="libSourceFilters"></div>
           </div>
           <div class="list" id="libResults"><div class="hint" data-i18n="lib.hint">Choose a media type above.</div></div>
-          <div class="list" id="queue" style="display:none;"></div>
         </div>
 
       </div>
@@ -869,6 +942,18 @@ html, body {
 
     </div>
 
+  </div>
+
+  <div class="queue-panel" id="queuePanel">
+    <div class="queue-panel-head">
+      <div class="queue-panel-title" data-i18n="tab.queue">Queue</div>
+      <div class="queue-panel-close" id="queuePanelClose">&times;</div>
+    </div>
+    <div class="searchbar" id="queueToolbar">
+      <button id="bQueueReload" style="margin-left:0" data-i18n="queue.reload">Refresh</button>
+      <button id="bQueueClear" style="background:var(--surface);color:var(--text-secondary)" data-i18n="queue.clear">Clear</button>
+    </div>
+    <div class="list" id="queue"></div>
   </div>
 
   <footer class="footer">
@@ -892,6 +977,7 @@ html, body {
     <button class="act" id="aOpen" data-i18n="sheet.open">Open</button>
     <button class="act" id="aArtist" data-i18n="label.artist">Artist</button>
     <button class="act" id="aAlbum" data-i18n="label.album">Album</button>
+    <button class="act" id="aMetadata" data-i18n="sheet.viewMetadata">View metadata</button>
     <button class="act ghost" id="aCancel" data-i18n="common.cancel">Cancel</button>
   </div>
 </div>
@@ -903,6 +989,15 @@ html, body {
     <div class="list" id="playlistList" style="max-height:320px;border:1px solid var(--border);margin-bottom:12px;"></div>
     <button class="act prim" id="plCreate" data-i18n="playlistSheet.createNew">New playlist …</button>
     <button class="act ghost" id="plCancel" data-i18n="common.cancel">Cancel</button>
+  </div>
+</div>
+
+<div class="sheetbg" id="metadataSheetbg">
+  <div class="sheet">
+    <h2 id="metadataTitle"></h2>
+    <p id="metadataSub"></p>
+    <div class="list" id="metadataBody" style="max-height:420px;border:1px solid var(--border);margin-bottom:12px;"></div>
+    <button class="act ghost" id="metaCancel" data-i18n="common.cancel">Cancel</button>
   </div>
 </div>
 
@@ -923,7 +1018,7 @@ html, body {
    pageshow for weeks - without the timer, the update check would be
    effectively dead.
    ================================================================== */
-var APP_VERSION = '2026-08-30.3';
+var APP_VERSION = '2026-08-30.5';
 var UPDATE_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 
 /* ==================================================================
@@ -1003,7 +1098,7 @@ var STRINGS = {
     "search.hint": "Enter a search term. A result plays on the player selected above.",
     "search.searching": "Searching …",
     "search.error": "Search failed ({err}).",
-    "search.noResults": "No matches. Try a different filter, or search more specifically – e.g. “Billy Joel - A Matter of Trust”.",
+    "search.noResults": "No matches. Try a different filter, or search more specifically – e.g. “St Germain - Tourist”.",
     "search.nothingFound": "Nothing found.",
     "nav.back": "← Back",
     "crumb.play": "Play",
@@ -1112,7 +1207,13 @@ var STRINGS = {
     "settings.title": "Settings",
     "settings.defaultSource": "Default Music Source (Library & Search)",
     "settings.noDefaultSource": "No default (show all)",
-    "settings.noSources": "No music providers found."
+    "settings.noSources": "No music providers found.",
+    "filter.sectionFilter": "Filter",
+    "filter.sectionSort": "Sort",
+    "filter.sectionSource": "Source",
+    "sheet.viewMetadata": "View metadata",
+    "metadata.loading": "Loading metadata …",
+    "metadata.none": "No metadata available."
 };
 
 function t(key, vars) {
@@ -1344,7 +1445,7 @@ function chooseDefaultSource(domain) {
   librarySourceFilter = domain;
   searchSourceFilter = domain;
   renderSettingsMenu();
-  if (currentTab === 'library' && currentLibType !== 'queue') { loadLibrary(currentLibType); }
+  if (currentTab === 'library') { loadLibrary(currentLibType); }
   if (currentTab === 'search') { renderResults(lastResults); }
 }
 
@@ -1787,6 +1888,7 @@ function pickDefaultPlayer() {
 }
 
 function bootstrap() {
+  refreshAvailableSources(); /* independent of players/queues - fires in parallel */
   send('players/all', null, function (err, list) {
     if (err) { toast(t('toast.playersUnavailable', { err: err }), true); return; }
     players = {};
@@ -1868,7 +1970,7 @@ function selectPlayer(id, force) {
     adoptQueue(activeQueue());
     renderNow();
     loadCrossfadeState();
-    if (currentTab === 'library' && currentLibType === 'queue') { loadQueue(); }
+    if (queuePanelOpen) { loadQueue(); }
   });
 }
 
@@ -1981,7 +2083,7 @@ function handleEvent(msg) {
         adoptQueue(msg.data);
         renderNow();
         loadCrossfadeState();
-        if (currentTab === 'library' && currentLibType === 'queue') { loadQueue(); }
+        if (queuePanelOpen) { loadQueue(); }
       }
       buildStations();
     }
@@ -1997,7 +2099,7 @@ function handleEvent(msg) {
     return;
   }
   if (evt === 'queue_items_updated') {
-    if (msg.object_id === activeQueueId && currentTab === 'library' && currentLibType === 'queue') { loadQueue(); }
+    if (msg.object_id === activeQueueId && queuePanelOpen) { loadQueue(); }
     return;
   }
   if (evt === 'media_item_updated' || evt === 'media_item_added' || evt === 'media_item_deleted') {
@@ -2567,26 +2669,15 @@ function itemMatchesSource(it, source) {
   return itemProviderDomains(it).indexOf(source) >= 0;
 }
 
-function collectSourceDomains(items) {
-  var seen = {}, out = [];
-  for (var i = 0; i < items.length; i++) {
-    var domains = itemProviderDomains(items[i]);
-    for (var j = 0; j < domains.length; j++) {
-      if (!seen[domains[j]]) { seen[domains[j]] = true; out.push(domains[j]); }
-    }
-  }
-  out.sort(function (a, b) { return sourceLabel(a) < sourceLabel(b) ? -1 : 1; });
-  return out;
-}
-
-/* Renders an "All sources" chip plus one chip per provider domain found
-   across `items` into #<boxId>, best-effort since it only ever reflects
-   what provider_mappings/provider actually gave us for the items that
-   happen to be loaded right now. */
-function renderSourceFilters(boxId, items, current, onPick) {
+/* Renders an "All sources" chip plus one chip per entry in `domains`
+   into #<boxId>. `domains` is the server's actual configured/enabled
+   music providers (see availableSourceDomains/refreshAvailableSources()
+   below) rather than anything derived from whatever happens to be
+   loaded right now, so the row stays populated and stable - including
+   before any search/library load has ever happened. */
+function renderSourceFilters(boxId, domains, current, onPick) {
   var box = $(boxId);
   if (!box) { return; }
-  var domains = collectSourceDomains(items);
   box.innerHTML = '';
   if (!domains.length) { return; }
   var allEl = document.createElement('div');
@@ -2603,6 +2694,35 @@ function renderSourceFilters(boxId, items, current, onPick) {
       box.appendChild(el);
     })(domains[i]);
   }
+}
+
+/* Cached list of the server's configured music-provider domains, shared
+   by the Search/Library source-filter chip rows and the Settings
+   default-source picker. Populated once bootstrap() has authenticated
+   (see refreshAvailableSources()), well before the user could realistically
+   reach Search/Library, so the chip rows are already populated instead
+   of only appearing after the first search/library load. */
+var availableSourceDomains = [];
+
+function onPickSearchSource(d) {
+  searchSourceFilter = d;
+  renderSourceFilters('sourceFilters', availableSourceDomains, searchSourceFilter, onPickSearchSource);
+  renderResults(lastResults);
+}
+
+function onPickLibrarySource(d) {
+  librarySourceFilter = d;
+  renderSourceFilters('libSourceFilters', availableSourceDomains, librarySourceFilter, onPickLibrarySource);
+  loadLibrary(currentLibType);
+}
+
+function refreshAvailableSources() {
+  loadMusicSources(function (err, domains) {
+    if (err || !domains) { return; }
+    availableSourceDomains = domains;
+    renderSourceFilters('sourceFilters', availableSourceDomains, searchSourceFilter, onPickSearchSource);
+    renderSourceFilters('libSourceFilters', availableSourceDomains, librarySourceFilter, onPickLibrarySource);
+  });
 }
 
 function toggleFav(it, cb) {
@@ -3559,6 +3679,8 @@ function buildFilters() {
       box.appendChild(el);
     })(FILTERS[i]);
   }
+  var sortBox = $('sortFilters');
+  sortBox.innerHTML = '';
   for (var j = 0; j < SEARCH_SORTS.length; j++) {
     (function (s) {
       var el = document.createElement('div');
@@ -3569,7 +3691,7 @@ function buildFilters() {
         buildFilters();
         if (!stack.length) { renderResults(lastResults); }
       };
-      box.appendChild(el);
+      sortBox.appendChild(el);
     })(SEARCH_SORTS[j]);
   }
 }
@@ -3599,15 +3721,12 @@ function renderResults(res) {
   var box = $('results');
   if (!res) {
     box.innerHTML = '<div class="hint">' + t('search.hint') + '</div>';
-    $('sourceFilters').innerHTML = '';
     return;
   }
-  var allItems = [];
   var sections = [];
   for (var g = 0; g < GROUPS.length; g++) {
     var grp = GROUPS[g];
     var secItems = (res[grp.key] || []).slice();
-    for (var k = 0; k < secItems.length; k++) { allItems.push(secItems[k]); }
     if (searchSortMode !== 'relevance') { sortMediaItems(secItems, searchSortMode); }
     if (searchSourceFilter !== 'all') {
       var filtered = [];
@@ -3618,10 +3737,6 @@ function renderResults(res) {
     }
     sections.push({ label: t(grp.lKey), type: grp.type, items: secItems });
   }
-  renderSourceFilters('sourceFilters', allItems, searchSourceFilter, function (d) {
-    searchSourceFilter = d;
-    renderResults(lastResults);
-  });
   renderSections(sections);
   var any = false;
   for (var i = 0; i < sections.length; i++) { if (sections[i].items.length) { any = true; } }
@@ -3736,16 +3851,63 @@ $('aAlbum').onclick = function () {
   closeSheet();
   if (al) { openAlbum(al); }
 };
+$('aMetadata').onclick = function () {
+  if (!pending2) { return; }
+  var it = pending2.item;
+  closeSheet();
+  openMetadataSheet(it);
+};
 $('aCancel').onclick = closeSheet;
 $('sheetbg').onclick = function (e) { if (e.target === $('sheetbg')) { closeSheet(); } };
 
 /* ==================================================================
+   VIEW METADATA
+   ==================================================================
+   Dumps every field Music Assistant has on an item (track/album/artist/
+   playlist/...) as pretty-printed JSON - deliberately generic instead
+   of a per-field UI, since the set of fields varies a lot by media type
+   and provider and this is meant as a raw look at "everything the
+   server knows", not a curated display. */
+var metadataSheetUri = null;   /* which item the currently open/loading sheet is for - race guard */
+
+function openMetadataSheet(it) {
+  if (!it) { return; }
+  metadataSheetUri = it.uri || null;
+  setText($('metadataTitle'), it.name || t('label.track'));
+  setText($('metadataSub'), '');
+  $('metadataBody').innerHTML = '<div class="hint">' + t('metadata.loading') + '</div>';
+  $('metadataSheetbg').className = 'sheetbg on';
+  if (!it.uri) { renderMetadataBody(it); return; }
+  var want = it.uri;
+  resolveItem(it.uri, function (err, resolved) {
+    if (want !== metadataSheetUri) { return; }   /* sheet closed or reopened for something else */
+    renderMetadataBody((!err && resolved) ? resolved : it);
+  });
+}
+
+function renderMetadataBody(data) {
+  var box = $('metadataBody');
+  box.innerHTML = '';
+  if (!data) { return; }
+  var json;
+  try { json = JSON.stringify(data, null, 2); } catch (e) { json = String(data); }
+  if (!json) { box.innerHTML = '<div class="hint">' + t('metadata.none') + '</div>'; return; }
+  var pre = document.createElement('pre');
+  pre.className = 'meta-json';
+  pre.appendChild(document.createTextNode(json));
+  box.appendChild(pre);
+}
+
+function closeMetadataSheet() { $('metadataSheetbg').className = 'sheetbg'; metadataSheetUri = null; }
+
+$('metaCancel').onclick = closeMetadataSheet;
+$('metadataSheetbg').onclick = function (e) { if (e.target === $('metadataSheetbg')) { closeMetadataSheet(); } };
+
+/* ==================================================================
    LIBRARY
    ==================================================================
-   The Queue (currentLibType === 'queue') is folded in here as one more
-   chip instead of its own footer icon - see loadLibrary() below, which
-   delegates to the existing loadQueue()/renderQueueRows() machinery
-   from the QUEUE section further down for that case.
+   The Queue lives in the shared #queuePanel (see QUEUE PANEL further
+   down), not as one of these media types - #libQueueToggle opens it.
    ================================================================== */
 var LIB_TYPES = [
   { k: 'playlist',  lKey: 'media.playlists',   cmd: 'music/playlists/library_items',  type: 'playlist' },
@@ -3768,22 +3930,19 @@ var libSortMode = 'name';
 function buildLibFilters() {
   var box = $('libFilters');
   box.innerHTML = '';
-  var inQueueMode = (currentLibType === 'queue');
 
-  /* Favorites-only chip first - doesn't apply to the Queue */
-  if (!inQueueMode) {
-    (function () {
-      var el = document.createElement('div');
-      el.className = 'filt fav' + (libFavOnly ? ' on' : '');
-      setText(el, t('lib.favOnly'));
-      el.onclick = function () {
-        libFavOnly = !libFavOnly;
-        buildLibFilters();
-        loadLibrary(currentLibType);
-      };
-      box.appendChild(el);
-    })();
-  }
+  /* Favorites-only chip first */
+  (function () {
+    var el = document.createElement('div');
+    el.className = 'filt fav' + (libFavOnly ? ' on' : '');
+    setText(el, t('lib.favOnly'));
+    el.onclick = function () {
+      libFavOnly = !libFavOnly;
+      buildLibFilters();
+      loadLibrary(currentLibType);
+    };
+    box.appendChild(el);
+  })();
 
   for (var i = 0; i < LIB_TYPES.length; i++) {
     (function (def) {
@@ -3799,60 +3958,30 @@ function buildLibFilters() {
     })(LIB_TYPES[i]);
   }
 
-  /* Queue chip - not a music library media type, see loadLibrary() below */
-  (function () {
-    var el = document.createElement('div');
-    el.className = 'filt' + (inQueueMode ? ' on' : '');
-    el.appendChild(document.createTextNode(t('lib.queue')));
-    el.onclick = function () {
-      currentLibType = 'queue';
-      buildLibFilters();
-      loadLibrary('queue');
-    };
-    box.appendChild(el);
-  })();
-
-  if (!inQueueMode) {
-    for (var j = 0; j < SORT_MODES.length; j++) {
-      (function (s) {
-        var el = document.createElement('div');
-        el.className = 'filt' + (s.k === libSortMode ? ' on' : '');
-        el.appendChild(document.createTextNode(t(s.lKey)));
-        el.onclick = function () {
-          libSortMode = s.k;
-          buildLibFilters();
-          loadLibrary(currentLibType);
-        };
-        box.appendChild(el);
-      })(SORT_MODES[j]);
-    }
+  var sortBox = $('libSortFilters');
+  sortBox.innerHTML = '';
+  for (var j = 0; j < SORT_MODES.length; j++) {
+    (function (s) {
+      var el = document.createElement('div');
+      el.className = 'filt' + (s.k === libSortMode ? ' on' : '');
+      el.appendChild(document.createTextNode(t(s.lKey)));
+      el.onclick = function () {
+        libSortMode = s.k;
+        buildLibFilters();
+        loadLibrary(currentLibType);
+      };
+      sortBox.appendChild(el);
+    })(SORT_MODES[j]);
   }
 }
 
 function loadLibrary(typeKey) {
-  var listBox = $('libResults');
-  var queueBox = $('queue');
-  var toolbar = $('queueToolbar');
-
-  if (typeKey === 'queue') {
-    listBox.style.display = 'none';
-    queueBox.style.display = '';
-    toolbar.style.display = '-webkit-flex';
-    toolbar.style.display = 'flex';
-    $('libSourceFilters').innerHTML = '';
-    loadQueue();
-    return;
-  }
-  listBox.style.display = '';
-  queueBox.style.display = 'none';
-  toolbar.style.display = 'none';
-
   var def = null;
   for (var i = 0; i < LIB_TYPES.length; i++) {
     if (LIB_TYPES[i].k === typeKey) { def = LIB_TYPES[i]; break; }
   }
   if (!def) { return; }
-  var box = listBox;
+  var box = $('libResults');
   box.innerHTML = '<div class="hint">' + t('common.loading') + '</div>';
   var want = typeKey;
   send(def.cmd, { limit: CFG.LIST_LIMIT, offset: 0, order_by: 'name' }, function (err, items) {
@@ -3872,10 +4001,6 @@ function loadLibrary(typeKey) {
       items = filtered;
     }
     sortMediaItems(items, libSortMode);
-    renderSourceFilters('libSourceFilters', items, librarySourceFilter, function (d) {
-      librarySourceFilter = d;
-      loadLibrary(currentLibType);
-    });
     if (librarySourceFilter !== 'all') {
       var srcFiltered = [];
       for (var s = 0; s < items.length; s++) {
@@ -3901,7 +4026,7 @@ function loadLibrary(typeKey) {
    country metadata at all, keyed by exact station name. Extend this
    list for any other station that keeps landing in "Other". */
 var RADIO_COUNTRY_OVERRIDES = {
-  '2SER 107.3': 'Australia',
+  '2SER 107.3 FM': 'Australia',
   'ABC Jazz HLS': 'Australia',
   'TrustFM': 'Australia',
   'FBi Radio - Sydney - 94.5 FM (MP3)': 'Australia'
@@ -4074,11 +4199,60 @@ $('footLibrary').innerHTML = svgIcon('library');
 $('footSearch').innerHTML = svgIcon('search');
 
 /* ==================================================================
-   QUEUE
+   QUEUE PANEL
    ==================================================================
-   Reached as a chip inside the Library page (currentLibType === 'queue'),
-   not as its own footer icon - see loadLibrary() above.
-   ================================================================== */
+   One shared #queuePanel component (markup lives right after .pages,
+   before .footer), slid in from the right over whichever page is
+   currently showing - not tied to any one page/tab. Opened from
+   #libQueueToggle (Library page) or #npQueueBig (Now Playing page);
+   both just call toggleQueuePanel(), so there is exactly one queue UI
+   to keep in sync rather than two. */
+var queuePanelOpen = false;
+
+function paintQueueToggle() {
+  var ids = ['libQueueToggle', 'npQueueBig'];
+  for (var i = 0; i < ids.length; i++) {
+    var el = $(ids[i]);
+    if (!el) { continue; }
+    if (queuePanelOpen) { addClass(el, 'on'); } else { removeClass(el, 'on'); }
+  }
+}
+
+function openQueuePanel() {
+  queuePanelOpen = true;
+  addClass($('queuePanel'), 'open');
+  paintQueueToggle();
+  loadQueue();
+}
+
+function closeQueuePanel() {
+  queuePanelOpen = false;
+  removeClass($('queuePanel'), 'open');
+  paintQueueToggle();
+}
+
+function toggleQueuePanel() {
+  if (queuePanelOpen) { closeQueuePanel(); } else { openQueuePanel(); }
+}
+
+$('libQueueToggle').onclick = toggleQueuePanel;
+$('npQueueBig').onclick = toggleQueuePanel;
+$('queuePanelClose').onclick = closeQueuePanel;
+
+/* Same click-outside-to-close pattern as the header dropdowns further
+   up (see closeStationMenu() and friends) - a separate listener since
+   the queue panel isn't part of that mutually-exclusive group and can
+   be open at the same time as any page. */
+document.addEventListener('click', function (e) {
+  if (!queuePanelOpen) { return; }
+  var n = e.target;
+  while (n && n !== document.body) {
+    if (n.id === 'queuePanel' || n.id === 'libQueueToggle' || n.id === 'npQueueBig') { return; }
+    n = n.parentNode;
+  }
+  closeQueuePanel();
+}, false);
+
 var QUEUE_HISTORY_LIMIT = 3;
 
 /* Remembers the last rendered queue, so a plain track change (identical
