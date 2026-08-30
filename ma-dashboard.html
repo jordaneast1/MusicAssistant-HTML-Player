@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
@@ -11,17 +11,34 @@
 <meta http-equiv="Expires" content="0">
 <link rel="apple-touch-icon" href="AppIcon.png">
 <link rel="icon" type="image/png" href="AppIcon.png">
-<title>Musik</title>
+<title>Music Assistant</title>
 <style>
 /* ------------------------------------------------------------------
-   Bewusst ES5 / CSS-Level-3, mit einer gezielten Ausnahme: CSS Custom
-   Properties fuer Dark/Light-Mode. Safari unterstuetzt sie ab 9.1
-   (iOS Safari 9.3) - das ist ohnehin die Mindestanforderung dieses
-   Projekts (siehe CLAUDE.md "Troubleshooting"), daher keine Kollision
-   mit der iPad-Kompatibilitaet. Sonst weiterhin: kein Grid, keine
-   Webfonts. Schriften kommen aus iOS selbst: Futura + Avenir Next.
+   Deliberately ES5 / CSS Level 3, with two targeted exceptions: CSS
+   custom properties for dark/light mode (Safari has supported them
+   since 9.1 / iOS Safari 9.3, well within this project's minimum
+   target - see CLAUDE.md "Troubleshooting") and the two bundled
+   @font-face declarations below. No CSS grid, no runtime webfont
+   CDN - the two font files are shipped locally next to this HTML
+   file (see "fonts/" in CLAUDE.md) so the app keeps working fully
+   offline, the same way AppIcon.png is bundled.
 ------------------------------------------------------------------ */
 * { -webkit-box-sizing: border-box; box-sizing: border-box; margin: 0; padding: 0; }
+
+@font-face {
+  font-family: 'Roboto Mono';
+  font-style: normal;
+  font-weight: 400;
+  src: url('fonts/RobotoMono-Regular.woff2') format('woff2');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 400;
+  src: url('fonts/Roboto-Regular.woff2') format('woff2');
+  font-display: swap;
+}
 
 :root {
   --bg: #1a1c1b;
@@ -84,7 +101,7 @@ html, body {
   height: 100%;
   background: var(--bg);
   color: var(--text);
-  font-family: "Avenir Next", "Avenir", "Helvetica Neue", Helvetica, sans-serif;
+  font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: rgba(240,163,46,0.25);
   overflow: hidden;
@@ -92,7 +109,7 @@ html, body {
 
 .wrap { height: 100%; display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; }
 
-/* ---------- Kopfzeile: Stationsleiste ---------- */
+/* ---------- Header: station bar ---------- */
 .top {
   height: 68px;
   border-bottom: 1px solid var(--border);
@@ -102,13 +119,13 @@ html, body {
   padding: 0 16px;
 }
 .brand {
-  font-family: "Futura-CondensedExtraBold", "Futura", "Avenir Next Condensed", "Helvetica Neue", sans-serif;
+  font-family: "Roboto Mono", "Courier New", monospace;
   font-size: 21px; letter-spacing: 3px; text-transform: uppercase;
   color: var(--accent); margin-right: 20px; white-space: nowrap;
 }
 .stations { -webkit-flex: 1; flex: 1; display: -webkit-flex; display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .station {
-  font-family: "Avenir Next Condensed", "Avenir Next", sans-serif;
+  font-family: "Roboto Mono", "Courier New", monospace;
   font-size: 13px; letter-spacing: 1.4px; text-transform: uppercase;
   color: var(--text-secondary); padding: 10px 15px 8px; margin-right: 6px;
   border-bottom: 3px solid transparent; white-space: nowrap; cursor: pointer;
@@ -119,7 +136,7 @@ html, body {
 .station.off { color: var(--text-faint); }
 
 .station-more {
-  font-family: "Avenir Next Condensed", sans-serif; font-size: 13px; color: var(--text-secondary);
+  font-family: "Roboto Mono", "Courier New", monospace; font-size: 13px; color: var(--text-secondary);
   padding: 10px 12px 8px; cursor: pointer; border-bottom: 3px solid transparent;
   -webkit-flex-shrink: 0; flex-shrink: 0; margin-right: 6px; -webkit-user-select: none; user-select: none;
 }
@@ -132,7 +149,7 @@ html, body {
   max-height: 260px; overflow-y: auto; -webkit-overflow-scrolling: touch;
 }
 .station-menu .menu-head, .group-menu .menu-head {
-  font-family: "Avenir Next Condensed", sans-serif; font-size: 12px; letter-spacing: 1.6px;
+  font-family: "Roboto Mono", "Courier New", monospace; font-size: 12px; letter-spacing: 1.6px;
   text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px;
 }
 .station-menu .station { display: block; border-bottom: 0; margin: 0 -4px; padding: 10px 4px; border-top: 1px solid var(--surface); }
@@ -152,7 +169,7 @@ html, body {
 .group-row:first-child { border-top: 0; }
 .group-row .nm { -webkit-flex: 1; flex: 1; font-size: 15px; color: var(--text); }
 .group-row .gbtn {
-  font-family: "Avenir Next Condensed", sans-serif; font-size: 13px; padding: 6px 12px;
+  font-family: "Roboto Mono", "Courier New", monospace; font-size: 13px; padding: 6px 12px;
   border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer;
   -webkit-appearance: none; border-radius: 0;
 }
@@ -160,19 +177,17 @@ html, body {
 .group-row .gbtn.remove { color: var(--danger); border-color: var(--danger); }
 .group-menu .hint { padding: 4px 4px 6px; }
 
-/* Sprachumschalter */
-.lang-switch {
-  display: -webkit-flex; display: flex; -webkit-flex-shrink: 0; flex-shrink: 0;
-  margin-left: 14px; border: 1px solid var(--border);
+/* Quick Actions: row of square buttons under the player list in stationMenu */
+.qa-row { display: -webkit-flex; display: flex; margin-top: 4px; }
+.qa-btn {
+  -webkit-flex: 1; flex: 1; -webkit-appearance: none; border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); font-family: "Roboto Mono", "Courier New", monospace; font-size: 12px; letter-spacing: 0.6px;
+  text-transform: uppercase; padding: 14px 6px; margin-right: 8px; text-align: center; cursor: pointer; border-radius: 0;
 }
-.lang-chip {
-  font-family: "Avenir Next Condensed", sans-serif; font-size: 11px; letter-spacing: 0.8px;
-  color: var(--text-secondary); padding: 5px 9px; cursor: pointer; -webkit-user-select: none; user-select: none;
-}
-.lang-chip:first-child { border-right: 1px solid var(--border); }
-.lang-chip.on { color: var(--accent); }
+.qa-btn:last-child { margin-right: 0; }
+.qa-btn:active { background: var(--surface-active); color: var(--accent); border-color: var(--accent); }
 
-/* Theme-Umschalter (Dark/Light) */
+/* Theme switch (dark/light) */
 .theme-switch {
   display: -webkit-flex; display: flex; -webkit-flex-shrink: 0; flex-shrink: 0;
   margin-left: 10px; -webkit-align-items: center; align-items: center;
@@ -199,14 +214,80 @@ html, body {
 }
 .accent-menu .swatch.on { border-color: var(--text); }
 
-/* Verbindungsampel ganz rechts in der Kopfzeile */
+/* Connection indicator light, far right in the header */
 .link { width: 9px; height: 9px; border-radius: 5px; background: var(--danger); margin-left: 14px; -webkit-flex-shrink: 0; flex-shrink: 0; }
 .link.on { background: var(--success); }
 
-/* ---------- Hauptbereich ---------- */
-.main { -webkit-flex: 1; flex: 1; display: -webkit-flex; display: flex; min-height: 0; }
+/* ---------- Page router ----------
+   .pages holds the 4 top-level pages (Now Playing / Radio / Library-and-
+   Search); only one is display:flex at a time, toggled by switchTab().
+   library and search share #pageLibSearch (see showLibSearchSide()) since
+   they're really the same two-column shell with a different right pane. */
+.pages { -webkit-flex: 1; flex: 1; display: -webkit-flex; display: flex; min-height: 0; }
+
+#pageLibSearch { -webkit-flex: 1; flex: 1; display: -webkit-flex; display: flex; min-height: 0; }
 .left { width: 430px; padding: 20px; border-right: 1px solid var(--border); display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; }
 .right { -webkit-flex: 1; flex: 1; display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; min-width: 0; padding: 20px; }
+
+/* ---------- Now Playing (full-screen page) ----------
+   Reuses the same .cover/.title/.transport/... classes as the compact
+   controls in .left (kept in sync by renderNow() writing to both sets of
+   element ids) - only the sizing is bumped via these descendant rules, so
+   there's one single CSS source of truth for how each control looks. */
+#pageNow {
+  -webkit-flex: 1; flex: 1; min-height: 0; padding: 30px 20px; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column;
+  -webkit-align-items: center; align-items: center; -webkit-justify-content: center; justify-content: center;
+  background-color: var(--bg); background-repeat: no-repeat; background-size: cover; background-position: center;
+}
+#pageNow .now-inner { width: 100%; max-width: 460px; -webkit-flex-shrink: 0; flex-shrink: 0; }
+#pageNow .cover { width: 320px; height: 320px; max-width: 66vw; max-height: 66vw; }
+#pageNow .titlerow { -webkit-justify-content: center; justify-content: center; }
+#pageNow .title { font-size: 34px; max-height: none; text-align: center; }
+#pageNow .sub { text-align: center; white-space: normal; }
+#pageNow .sub.album { text-align: center; }
+#pageNow #lyricsBoxBig { display: none; }
+#pageNow.lyrics-open .now-inner { display: none; }
+#pageNow.lyrics-open #lyricsBoxBig {
+  display: block; width: 100%; max-width: 620px; max-height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch;
+}
+
+/* ---------- Radio (favorite stations grid, grouped by country) ---------- */
+#pageRadio { -webkit-flex: 1; flex: 1; min-height: 0; padding: 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.radio-grid { display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap; flex-wrap: wrap; margin: 0 -6px 14px; }
+.radio-tile {
+  width: 160px; height: 160px; margin: 6px; position: relative; overflow: hidden; cursor: pointer;
+  background-color: var(--surface); background-size: cover; background-position: center; border: 1px solid var(--border);
+}
+.radio-tile .rt-shade {
+  position: absolute; left: 0; right: 0; top: 0; bottom: 0;
+  background-image: -webkit-linear-gradient(top, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.75) 100%);
+  background-image: linear-gradient(to bottom, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.75) 100%);
+}
+/* White text + shadow here (and the black .rt-shade scrim above) are a
+   deliberate exception to the "no raw hex outside :root" rule: this
+   text sits over an arbitrary, unthemed station photo, so it needs to
+   stay legible the same way in both themes rather than following
+   --text/--bg like everything else on themed surfaces. */
+.radio-tile .rt-name {
+  position: absolute; left: 10px; right: 10px; bottom: 9px;
+  font-family: "Roboto Mono", "Courier New", monospace; font-size: 14px; line-height: 1.3; color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+.radio-tile .rt-ph { font-size: 40px; color: var(--border); text-align: center; line-height: 160px; }
+
+/* ---------- Footer navigation (icon-only, reuses the .tab pill logic) ---------- */
+.footer {
+  height: 60px; border-top: 1px solid var(--border); background: var(--bg-elevated);
+  display: -webkit-flex; display: flex; -webkit-flex-shrink: 0; flex-shrink: 0;
+}
+.footer .tab {
+  -webkit-flex: 1; flex: 1; display: -webkit-flex; display: flex;
+  -webkit-align-items: center; align-items: center; -webkit-justify-content: center; justify-content: center;
+  margin: 0; padding: 0; border-bottom: 0; border-top: 3px solid transparent; color: var(--text-secondary); cursor: pointer;
+}
+.footer .tab.on { color: var(--accent); border-top-color: var(--accent); }
+.footer .tab svg { display: block; }
 
 /* ---------- Now Playing ---------- */
 .cover {
@@ -221,18 +302,18 @@ html, body {
 .cover img.show { opacity: 1; }
 .cover .ph {
   position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  font-family: "Futura", sans-serif; font-size: 46px; color: var(--border);
+  font-family: "Roboto Mono", "Courier New", monospace; font-size: 46px; color: var(--border);
   text-align: center; line-height: 220px;
   opacity: 0;
   -webkit-transition: opacity 0.4s ease; transition: opacity 0.4s ease;
 }
 .cover .ph.show { opacity: 1; }
 
-/* Titelzeile trägt rechts den Favoritenknopf */
+/* Title row carries the favorite button on the right */
 .titlerow { display: -webkit-flex; display: flex; -webkit-align-items: flex-start; align-items: flex-start; }
 .title {
   -webkit-flex: 1; flex: 1; min-width: 0;
-  font-family: "Futura-CondensedExtraBold", "Futura", "Avenir Next Condensed", "Helvetica Neue", sans-serif;
+  font-family: "Roboto Mono", "Courier New", monospace;
   font-size: 27px; line-height: 1.15; letter-spacing: 0.4px; margin-bottom: 7px;
   max-height: 62px; overflow: hidden;
 }
@@ -251,7 +332,7 @@ html, body {
 .sub.tap { color: var(--text-secondary); cursor: pointer; }
 .sub.tap:active { color: var(--accent); }
 
-/* ---------- Signature: Skalenanzeige wie am Tuner ---------- */
+/* ---------- Signature touch: tuner-style scale display ---------- */
 .dial { margin-bottom: 6px; }
 .dial-track {
   position: relative; height: 26px; border-bottom: 1px solid var(--border); cursor: pointer;
@@ -263,7 +344,7 @@ html, body {
 .dial-needle { position: absolute; bottom: -3px; width: 2px; height: 20px; background: var(--accent); margin-left: -1px; left: 0; }
 .dial-times {
   display: -webkit-flex; display: flex; -webkit-justify-content: space-between; justify-content: space-between;
-  font-family: "Avenir Next Condensed", sans-serif; font-size: 12px; letter-spacing: 1px; color: var(--text-muted); margin-top: 5px;
+  font-family: "Roboto Mono", "Courier New", monospace; font-size: 12px; letter-spacing: 1px; color: var(--text-muted); margin-top: 5px;
 }
 
 /* ---------- Transport ---------- */
@@ -278,22 +359,22 @@ html, body {
 .btn svg { display: block; }
 .toggles { display: -webkit-flex; display: flex; -webkit-justify-content: center; justify-content: center; margin-bottom: 18px; }
 .tgl {
-  font-family: "Avenir Next Condensed", sans-serif; font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase;
+  font-family: "Roboto Mono", "Courier New", monospace; font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase;
   color: var(--text-muted); border: 1px solid var(--border); padding: 8px 16px; margin: 0 5px; cursor: pointer;
 }
 .tgl.on { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
 
-/* ---------- Lautstärke ---------- */
+/* ---------- Volume ---------- */
 .vol { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; margin-top: auto; }
-.vol .lbl { font-family: "Avenir Next Condensed", sans-serif; font-size: 12px; letter-spacing: 1.4px; color: var(--text-muted); width: 34px; }
+.vol .lbl { font-family: "Roboto Mono", "Courier New", monospace; font-size: 12px; letter-spacing: 1.4px; color: var(--text-muted); width: 34px; }
 .vol input[type=range] { -webkit-appearance: none; -webkit-flex: 1; flex: 1; height: 30px; background: transparent; }
 .vol input[type=range]::-webkit-slider-runnable-track { height: 3px; background: var(--border); }
 .vol input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; margin-top: -12px; border-radius: 13px; background: var(--accent); }
-.vol .val { font-family: "Avenir Next Condensed", sans-serif; font-size: 13px; color: var(--text-secondary); width: 40px; text-align: right; }
+.vol .val { font-family: "Roboto Mono", "Courier New", monospace; font-size: 13px; color: var(--text-secondary); width: 40px; text-align: right; }
 
 .vol-exp { margin-top: 10px; }
 .vol-exp-hit {
-  font-family: "Avenir Next Condensed", sans-serif; font-size: 12px; letter-spacing: 1.3px; text-transform: uppercase;
+  font-family: "Roboto Mono", "Courier New", monospace; font-size: 12px; letter-spacing: 1.3px; text-transform: uppercase;
   color: var(--text-secondary); cursor: pointer; padding: 7px 0; border-top: 1px solid var(--border);
   text-align: center; -webkit-user-select: none; user-select: none;
 }
@@ -302,13 +383,14 @@ html, body {
 .vol-members .vol { margin-top: 0; margin-bottom: 8px; }
 .vol-members .vol .lbl { width: 90px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
-/* ---------- Suche / Blättern ---------- */
-.tabs { display: -webkit-flex; display: flex; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+/* ---------- Tab pill base (reused by .footer for the bottom nav icons) ---------- */
 .tab {
-  font-family: "Avenir Next Condensed", sans-serif; font-size: 13px; letter-spacing: 1.6px; text-transform: uppercase;
+  font-family: "Roboto Mono", "Courier New", monospace; font-size: 13px; letter-spacing: 1.6px; text-transform: uppercase;
   color: var(--text-muted); padding: 0 2px 11px; margin-right: 26px; border-bottom: 3px solid transparent; cursor: pointer;
 }
 .tab.on { color: var(--text); border-bottom-color: var(--accent); }
+
+/* ---------- Search / browsing ---------- */
 
 .searchbar { display: -webkit-flex; display: flex; margin-bottom: 12px; }
 .searchbar input[type=text] {
@@ -317,26 +399,26 @@ html, body {
 }
 .searchbar input[type=text]:focus { outline: none; border-color: var(--accent); }
 .searchbar button {
-  -webkit-appearance: none; border: 0; background: var(--accent); color: var(--on-accent); font-family: "Avenir Next Condensed", sans-serif;
+  -webkit-appearance: none; border: 0; background: var(--accent); color: var(--on-accent); font-family: "Roboto Mono", "Courier New", monospace;
   font-size: 14px; letter-spacing: 1.6px; text-transform: uppercase; padding: 0 24px; margin-left: 8px; border-radius: 0; cursor: pointer;
 }
 .filters { display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap; flex-wrap: wrap; margin-bottom: 14px; }
 .filt {
-  font-family: "Avenir Next Condensed", sans-serif; font-size: 12px; letter-spacing: 1.3px; text-transform: uppercase;
+  font-family: "Roboto Mono", "Courier New", monospace; font-size: 12px; letter-spacing: 1.3px; text-transform: uppercase;
   color: var(--text-secondary); border: 1px solid var(--border); padding: 7px 13px; margin: 0 7px 7px 0; cursor: pointer;
 }
 .filt.on { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
 .filt.fav { border-color: var(--fav-border); color: var(--fav); }
 .filt.fav.on { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
 
-/* Zurück-Leiste über der Trefferliste (Interpret > Album > …) */
+/* Back bar above the results list (artist > album > …) */
 .crumbs {
   display: none; -webkit-align-items: center; align-items: center;
   border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 12px;
 }
 .crumbs.on { display: -webkit-flex; display: flex; }
 .back {
-  font-family: "Avenir Next Condensed", sans-serif; font-size: 13px; letter-spacing: 1.4px; text-transform: uppercase;
+  font-family: "Roboto Mono", "Courier New", monospace; font-size: 13px; letter-spacing: 1.4px; text-transform: uppercase;
   color: var(--accent); border: 1px solid var(--border); padding: 9px 15px; margin-right: 14px; white-space: nowrap; cursor: pointer;
 }
 .back:active { background: var(--surface); }
@@ -344,7 +426,7 @@ html, body {
 .crumbtxt .n { font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .crumbtxt .s { font-size: 13px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .crumbact {
-  font-family: "Avenir Next Condensed", sans-serif; font-size: 12px; letter-spacing: 1.3px; text-transform: uppercase;
+  font-family: "Roboto Mono", "Courier New", monospace; font-size: 12px; letter-spacing: 1.3px; text-transform: uppercase;
   color: var(--on-accent); background: var(--accent); padding: 9px 15px; margin-left: 10px; white-space: nowrap; cursor: pointer;
 }
 .crumbheart { width: 44px; height: 40px; margin-left: 6px; text-align: center; line-height: 40px; cursor: pointer; }
@@ -353,7 +435,7 @@ html, body {
 
 .list { -webkit-flex: 1; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .group {
-  font-family: "Avenir Next Condensed", sans-serif; font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+  font-family: "Roboto Mono", "Courier New", monospace; font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
   color: var(--accent); padding: 14px 0 7px; border-bottom: 1px solid var(--border); margin-bottom: 4px;
 }
 .row { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; border-bottom: 1px solid var(--surface); }
@@ -372,7 +454,7 @@ html, body {
 .row .thumb img { width: 46px; height: 46px; display: block; }
 .row .num {
   width: 30px; -webkit-flex-shrink: 0; flex-shrink: 0; text-align: right; margin-right: 13px;
-  font-family: "Avenir Next Condensed", sans-serif; font-size: 14px; color: var(--text-muted);
+  font-family: "Roboto Mono", "Courier New", monospace; font-size: 14px; color: var(--text-muted);
 }
 .row .txt { min-width: 0; -webkit-flex: 1; flex: 1; }
 .row .n {
@@ -399,11 +481,12 @@ html, body {
   padding: 10px 14px; margin: 4px 0 10px 0; font-size: 13px; color: var(--text-dim); line-height: 1.4;
 }
 
-/* ---------- Songtexte ---------- */
-/* position:relative macht #lyricsBox zum offsetParent seiner .lyric-line-Kinder;
-   ohne das ist offsetTop seitenrelativ (offsetParent waere <body>), was die
-   Scroll-Zentrierung in updateLyricsHighlight() verfaelscht. */
-#lyricsBox { position: relative; }
+/* ---------- Lyrics ---------- */
+/* position:relative makes #lyricsBoxBig the offsetParent of its
+   .lyric-line children; without it, offsetTop would be relative to the
+   page (offsetParent would be <body>), which throws off the scroll
+   centering in updateLyricsHighlight(). */
+#lyricsBoxBig { position: relative; }
 .lyrics-plain { white-space: pre-wrap; color: var(--text-dim); font-size: 17px; line-height: 1.7; padding: 4px; }
 .lyric-line {
   color: var(--text-muted); font-size: 17px; line-height: 1.7; padding: 4px;
@@ -412,7 +495,7 @@ html, body {
 .lyric-line.now { color: var(--accent); font-weight: bold; }
 .queue-banner strong { color: var(--accent); font-weight: normal; }
 
-/* ---------- Aktionsblatt ---------- */
+/* ---------- Action sheet ---------- */
 .sheetbg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(10,11,11,0.82); display: none; z-index: 20; }
 .sheetbg.on { display: block; }
 .sheet {
@@ -421,7 +504,7 @@ html, body {
   max-height: 92%; overflow-y: auto; -webkit-overflow-scrolling: touch;
   background: var(--bg-elevated); border: 1px solid var(--border); padding: 26px;
 }
-.sheet h2 { font-family: "Futura-CondensedExtraBold", "Futura", sans-serif; font-size: 23px; font-weight: normal; margin-bottom: 4px; }
+.sheet h2 { font-family: "Roboto Mono", "Courier New", monospace; font-size: 23px; font-weight: normal; margin-bottom: 4px; }
 .sheet p { color: var(--text-secondary); font-size: 14px; margin-bottom: 22px; }
 .act {
   display: block; width: 100%; text-align: left; -webkit-appearance: none; border: 1px solid var(--border); background: var(--surface);
@@ -432,11 +515,11 @@ html, body {
 .act.ghost { background: transparent; color: var(--text-secondary); text-align: center; margin-top: 6px; }
 .act.gone { display: none; }
 .sheet .sep {
-  font-family: "Avenir Next Condensed", sans-serif; font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  font-family: "Roboto Mono", "Courier New", monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
   color: var(--text-muted); padding: 14px 0 8px;
 }
 
-/* ---------- Meldung ---------- */
+/* ---------- Toast ---------- */
 .toast {
   position: fixed; left: 50%; bottom: 26px; margin-left: -190px; width: 380px; text-align: center;
   background: var(--accent); color: var(--on-accent); font-size: 15px; padding: 13px; display: none; z-index: 30;
@@ -445,25 +528,26 @@ html, body {
 .toast.on { display: block; }
 </style>
 <script>
-  /* Vor dem ersten Paint gesicherte Theme-Wahl anwenden, sonst blitzt beim
-     Laden kurz das falsche Theme auf (kein prefers-color-scheme-Fallback
-     noetig, der greift ueber die CSS-Media-Query von selbst). */
+  /* Apply a saved theme choice before the first paint, otherwise the
+     wrong theme briefly flashes on load (no prefers-color-scheme
+     fallback needed here, that's already handled by the CSS media
+     query on its own). */
   (function () {
     try {
       var t = localStorage.getItem('ma-dashboard-theme');
       if (t === 'light' || t === 'dark') { document.documentElement.setAttribute('data-theme', t); }
-    } catch (e) { /* Privacy-Modus o.ae. - ignorieren */ }
+    } catch (e) { /* private browsing mode or similar - ignore */ }
   })();
 
-  /* Frei waehlbare Akzentfarbe (ersetzt den Standard-Gelbton #f0a32e). Wird
-     hier bewusst schon vor dem ersten Paint angewendet (gleicher Grund wie
-     beim Theme oben) UND als globale Funktion definiert, damit der
-     Haupt-Script-Block weiter unten sie bei einer Nutzerauswahl erneut
-     aufrufen kann, ohne die Farb-Mathematik zu duplizieren. Die vorgegebene
-     Standardfarbe (ACCENT_PRESETS[0]) laeuft NICHT durch diese Funktion,
-     sondern bleibt der fest im Haupt-CSS hinterlegte, handverlesene Wert -
-     nur echte Nutzerauswahlen bekommen ein per Style-Tag injiziertes
-     Custom-Property-Override. */
+  /* Freely choosable accent color (replaces the default amber #f0a32e).
+     Deliberately applied here already, before the first paint (same
+     reasoning as the theme above), AND defined as a global function, so
+     the main script block further down can call it again on a user
+     selection without duplicating the color math. The default color
+     (ACCENT_PRESETS[0]) deliberately does NOT run through this
+     function - it stays the hand-picked value baked into the main CSS;
+     only actual user selections get a custom-property override
+     injected via a style tag. */
   var ACCENT_STORAGE_KEY = 'ma-dashboard-accent';
   var ACCENT_PRESETS = ['#f0a32e', '#e0483f', '#e0568f', '#9b6bd6', '#4d8fe0', '#3fb8b0', '#5cad5c'];
 
@@ -534,7 +618,7 @@ html, body {
   }
   applyAccentOverride();
 
-  /* Dynamischer Cache-Buster für ma-env.js */
+  /* Dynamic cache-buster for ma-env.js */
   document.write('<script src="ma-env.js?v=' + (new Date().getTime()) + '"><\/script>');
 </script>
 </head>
@@ -543,149 +627,201 @@ html, body {
 <div class="wrap">
 
   <div class="top" id="topBar" style="position:relative;z-index:26;">
-    <div class="brand" data-i18n="top.brand">Musik</div>
+    <div class="brand">Music Assistant</div>
     <div class="stations" id="stations"></div>
     <div class="station-more" id="stationMore">&#10095;</div>
-    <div class="lang-switch" id="langSwitch">
-      <div class="lang-chip" id="langDe">DE</div>
-      <div class="lang-chip" id="langEn">EN</div>
-    </div>
     <div class="theme-switch" id="themeSwitch"></div>
     <div class="accent-switch" id="accentSwitch"></div>
     <div class="link" id="link"></div>
   </div>
 
   <div class="station-menu" id="stationMenu" style="display:none;">
-    <div class="menu-head" data-i18n="top.allPlayers">Alle Player</div>
+    <div class="menu-head" data-i18n="top.allPlayers">All players</div>
     <div id="stationMenuList"></div>
+    <div class="menu-head" data-i18n="top.quickActions">Quick Actions</div>
+    <div class="qa-row">
+      <div class="qa-btn" id="qaPlayMusic" data-i18n="qa.playMusic">Play Music</div>
+      <div class="qa-btn" id="qaSleep" data-i18n="qa.sleep">Sleep</div>
+    </div>
   </div>
 
   <div class="group-menu" id="groupMenu" style="display:none;">
-    <div class="menu-head" id="groupMenuHead" data-i18n="top.group">Gruppe</div>
+    <div class="menu-head" id="groupMenuHead" data-i18n="top.group">Group</div>
     <div id="groupMenuActive"></div>
-    <div class="menu-head" id="groupMenuOthersHead" data-i18n="top.otherDevices">Weitere Geräte</div>
+    <div class="menu-head" id="groupMenuOthersHead" data-i18n="top.otherDevices">Other devices</div>
     <div id="groupMenuOthers"></div>
   </div>
 
   <div class="accent-menu" id="accentMenu" style="display:none;">
-    <div class="menu-head" data-i18n="top.accentColor">Akzentfarbe</div>
+    <div class="menu-head" data-i18n="top.accentColor">Accent color</div>
     <div class="swatches" id="accentSwatches"></div>
   </div>
 
-  <div class="main">
+  <div class="pages">
 
-    <div class="left">
-      <div class="cover" id="cover"><div class="ph show">&#9835;</div></div>
-      <div class="titlerow">
-        <div class="title" id="title" data-i18n="now.nothingSelected">Nichts ausgewählt</div>
-        <div class="heart hide" id="npAdd"><span>&#43;</span></div>
-        <div class="heart hide" id="npHeart"><span>&#9825;</span></div>
-        <div class="heart hide" id="npLyrics"><span>Aa</span></div>
-      </div>
-      <div class="sub" id="artist"></div>
-      <div class="sub album" id="album"></div>
-
-      <div class="dial">
-        <div class="dial-track" id="dialTrack">
-          <div class="dial-fill" id="dialFill"></div>
-          <div class="dial-needle" id="dialNeedle"></div>
+    <div id="pageNow" style="display:none;">
+      <div class="now-inner">
+        <div class="cover" id="coverBig"><div class="ph show">&#9835;</div></div>
+        <div class="titlerow">
+          <div class="title" id="titleBig" data-i18n="now.nothingSelected">Nothing selected</div>
+          <div class="heart hide" id="npAddBig"><span>&#43;</span></div>
+          <div class="heart hide" id="npHeartBig"><span>&#9825;</span></div>
+          <div class="heart hide" id="npLyricsBig"><span>Aa</span></div>
         </div>
-        <div class="dial-times"><span id="tPos">0:00</span><span id="tDur">0:00</span></div>
-      </div>
+        <div class="sub" id="artistBig"></div>
+        <div class="sub album" id="albumBig"></div>
 
-      <div class="transport">
-        <div class="btn" id="bPrev"></div>
-        <div class="btn big" id="bPlay"></div>
-        <div class="btn" id="bNext"></div>
-      </div>
+        <div class="dial">
+          <div class="dial-track" id="dialTrackBig">
+            <div class="dial-fill" id="dialFillBig"></div>
+            <div class="dial-needle" id="dialNeedleBig"></div>
+          </div>
+          <div class="dial-times"><span id="tPosBig">0:00</span><span id="tDurBig">0:00</span></div>
+        </div>
 
-      <div class="toggles">
-        <div class="tgl" id="bShuffle" data-i18n="toggle.shuffle">Zufall</div>
-        <div class="tgl" id="bRepeat" data-i18n="toggle.repeat">Wiederholen</div>
-        <div class="tgl" id="bAutomix" data-i18n="toggle.automix">Automix</div>
-      </div>
+        <div class="transport">
+          <div class="btn" id="bPrevBig"></div>
+          <div class="btn big" id="bPlayBig"></div>
+          <div class="btn" id="bNextBig"></div>
+        </div>
 
-      <div class="vol">
-        <div class="lbl" data-i18n="vol.label">Vol</div>
-        <input type="range" id="vol" min="0" max="100" value="0">
-        <div class="val" id="volVal">0</div>
+        <div class="toggles">
+          <div class="tgl" id="bShuffleBig" data-i18n="toggle.shuffle">Shuffle</div>
+          <div class="tgl" id="bRepeatBig" data-i18n="toggle.repeat">Repeat</div>
+          <div class="tgl" id="bAutomixBig" data-i18n="toggle.automix">Automix</div>
+        </div>
+
+        <div class="vol">
+          <div class="lbl" data-i18n="vol.label">Vol</div>
+          <input type="range" id="volBig" min="0" max="100" value="0">
+          <div class="val" id="volValBig">0</div>
+        </div>
+        <div class="vol-exp" id="volExpBig" style="display:none;">
+          <div class="vol-exp-hit" id="volExpHitBig" data-i18n="vol.groupVolumeCollapsed">Group volume &#9660;</div>
+          <div class="vol-members" id="volMembersBig" style="display:none;"></div>
+        </div>
       </div>
-      <div class="vol-exp" id="volExp" style="display:none;">
-        <div class="vol-exp-hit" id="volExpHit" data-i18n="vol.groupVolumeCollapsed">Gruppen-Lautstärke &#9660;</div>
-        <div class="vol-members" id="volMembers" style="display:none;"></div>
-      </div>
+      <div class="list" id="lyricsBoxBig"></div>
     </div>
 
-    <div class="right">
-      <div class="tabs">
-        <div class="tab on" data-tab="queue" data-i18n="tab.queue">Warteschlange</div>
-        <div class="tab" data-tab="library" data-i18n="tab.library">Bibliothek</div>
-        <div class="tab" data-tab="search" data-i18n="tab.search">Suchen</div>
-      </div>
+    <div id="pageRadio" style="display:none;">
+      <div id="radioGrid"><div class="hint" data-i18n="common.loading">Loading …</div></div>
+    </div>
 
-      <div id="paneSearch" style="display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-flex:1;flex:1;min-height:0;">
-        <div id="searchTools">
-          <div class="searchbar">
-            <input type="text" id="q" placeholder="Titel, Interpret, Album, Playlist" data-i18n-placeholder="search.placeholder" autocorrect="off" autocapitalize="off">
-            <button id="bSearch" data-i18n="search.button">Suchen</button>
+    <div id="pageLibSearch" style="display:none;">
+
+      <div class="left">
+        <div class="cover" id="cover"><div class="ph show">&#9835;</div></div>
+        <div class="titlerow">
+          <div class="title" id="title" data-i18n="now.nothingSelected">Nothing selected</div>
+          <div class="heart hide" id="npAdd"><span>&#43;</span></div>
+          <div class="heart hide" id="npHeart"><span>&#9825;</span></div>
+          <div class="heart hide" id="npLyrics"><span>Aa</span></div>
+        </div>
+        <div class="sub" id="artist"></div>
+        <div class="sub album" id="album"></div>
+
+        <div class="dial">
+          <div class="dial-track" id="dialTrack">
+            <div class="dial-fill" id="dialFill"></div>
+            <div class="dial-needle" id="dialNeedle"></div>
           </div>
-          <div class="filters" id="filters"></div>
+          <div class="dial-times"><span id="tPos">0:00</span><span id="tDur">0:00</span></div>
         </div>
-        <div class="crumbs" id="crumbs">
-          <div class="back" id="bBack" data-i18n="nav.back">&#8592; Zurück</div>
-          <div class="crumbtxt"><div class="n" id="crumbName"></div><div class="s" id="crumbSub"></div></div>
-          <div class="crumbheart" id="crumbHeart"><span>&#9825;</span></div>
-          <div class="crumbact" id="crumbPlay" data-i18n="crumb.play">Abspielen</div>
+
+        <div class="transport">
+          <div class="btn" id="bPrev"></div>
+          <div class="btn big" id="bPlay"></div>
+          <div class="btn" id="bNext"></div>
         </div>
-        <div class="filters" id="viewTabs" style="display:none;"></div>
-        <div class="list" id="results"><div class="hint" data-i18n="search.hint">Suchbegriff eingeben. Ein Treffer wird auf dem oben gewählten Player abgespielt.</div></div>
+
+        <div class="toggles">
+          <div class="tgl" id="bShuffle" data-i18n="toggle.shuffle">Shuffle</div>
+          <div class="tgl" id="bRepeat" data-i18n="toggle.repeat">Repeat</div>
+          <div class="tgl" id="bAutomix" data-i18n="toggle.automix">Automix</div>
+        </div>
+
+        <div class="vol">
+          <div class="lbl" data-i18n="vol.label">Vol</div>
+          <input type="range" id="vol" min="0" max="100" value="0">
+          <div class="val" id="volVal">0</div>
+        </div>
+        <div class="vol-exp" id="volExp" style="display:none;">
+          <div class="vol-exp-hit" id="volExpHit" data-i18n="vol.groupVolumeCollapsed">Group volume &#9660;</div>
+          <div class="vol-members" id="volMembers" style="display:none;"></div>
+        </div>
       </div>
 
-      <div id="paneQueue" style="display:none;-webkit-flex:1;flex:1;min-height:0;-webkit-flex-direction:column;flex-direction:column;">
-        <div class="searchbar">
-          <button id="bQueueReload" style="margin-left:0" data-i18n="queue.reload">Aktualisieren</button>
-          <button id="bQueueClear" style="background:var(--surface);color:var(--text-secondary)" data-i18n="queue.clear">Leeren</button>
+      <div class="right">
+
+        <div id="paneSearch" style="display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-flex:1;flex:1;min-height:0;">
+          <div id="searchTools">
+            <div class="searchbar">
+              <input type="text" id="q" placeholder="Track, artist, album, playlist" data-i18n-placeholder="search.placeholder" autocorrect="off" autocapitalize="off">
+              <button id="bSearch" data-i18n="search.button">Search</button>
+            </div>
+            <div class="filters" id="filters"></div>
+            <div class="filters" id="sourceFilters"></div>
+          </div>
+          <div class="crumbs" id="crumbs">
+            <div class="back" id="bBack" data-i18n="nav.back">&#8592; Back</div>
+            <div class="crumbtxt"><div class="n" id="crumbName"></div><div class="s" id="crumbSub"></div></div>
+            <div class="crumbheart" id="crumbHeart"><span>&#9825;</span></div>
+            <div class="crumbact" id="crumbPlay" data-i18n="crumb.play">Play</div>
+          </div>
+          <div class="filters" id="viewTabs" style="display:none;"></div>
+          <div class="list" id="results"><div class="hint" data-i18n="search.hint">Enter a search term. A result plays on the player selected above.</div></div>
         </div>
-        <div class="list" id="queue"></div>
+
+        <div id="paneLibrary" style="display:none;-webkit-flex:1;flex:1;min-height:0;-webkit-flex-direction:column;flex-direction:column;">
+          <div class="filters" id="libFilters"></div>
+          <div class="filters" id="libSourceFilters"></div>
+          <div class="searchbar" id="queueToolbar" style="display:none;">
+            <button id="bQueueReload" style="margin-left:0" data-i18n="queue.reload">Refresh</button>
+            <button id="bQueueClear" style="background:var(--surface);color:var(--text-secondary)" data-i18n="queue.clear">Clear</button>
+          </div>
+          <div class="list" id="libResults"><div class="hint" data-i18n="lib.hint">Choose a media type above.</div></div>
+          <div class="list" id="queue" style="display:none;"></div>
+        </div>
+
       </div>
 
-      <div id="paneLibrary" style="display:none;-webkit-flex:1;flex:1;min-height:0;-webkit-flex-direction:column;flex-direction:column;">
-        <div class="filters" id="libFilters"></div>
-        <div class="list" id="libResults"><div class="hint" data-i18n="lib.hint">Medientyp oben wählen.</div></div>
-      </div>
-
-      <div id="paneLyrics" style="display:none;-webkit-flex:1;flex:1;min-height:0;-webkit-flex-direction:column;flex-direction:column;">
-        <div class="list" id="lyricsBox"></div>
-      </div>
     </div>
 
   </div>
+
+  <footer class="footer">
+    <div class="tab" data-tab="now" id="footNow"></div>
+    <div class="tab" data-tab="radio" id="footRadio"></div>
+    <div class="tab" data-tab="library" id="footLibrary"></div>
+    <div class="tab" data-tab="search" id="footSearch"></div>
+  </footer>
 </div>
 
 <div class="sheetbg" id="sheetbg">
   <div class="sheet">
     <h2 id="sheetTitle"></h2>
     <p id="sheetSub"></p>
-    <button class="act prim" id="aNow" data-i18n="sheet.playNow">Jetzt abspielen</button>
-    <button class="act" id="aNext" data-i18n="sheet.playNext">Als Nächstes</button>
-    <button class="act" id="aAdd" data-i18n="sheet.addToQueue">Hinten anhängen</button>
-    <button class="act" id="aPlaylist" data-i18n="sheet.addToPlaylist">Zur Playlist</button>
-    <button class="act fav" id="aFav" data-i18n="sheet.favDefault">Favorit …</button>
-    <div class="sep" id="aNavSep" data-i18n="sheet.goTo">Gehe zu</div>
-    <button class="act" id="aOpen" data-i18n="sheet.open">Öffnen</button>
-    <button class="act" id="aArtist" data-i18n="label.artist">Interpret</button>
+    <button class="act prim" id="aNow" data-i18n="sheet.playNow">Play now</button>
+    <button class="act" id="aNext" data-i18n="sheet.playNext">Play next</button>
+    <button class="act" id="aAdd" data-i18n="sheet.addToQueue">Add to queue</button>
+    <button class="act" id="aPlaylist" data-i18n="sheet.addToPlaylist">Add to playlist</button>
+    <button class="act fav" id="aFav" data-i18n="sheet.favDefault">Favorite …</button>
+    <div class="sep" id="aNavSep" data-i18n="sheet.goTo">Go to</div>
+    <button class="act" id="aOpen" data-i18n="sheet.open">Open</button>
+    <button class="act" id="aArtist" data-i18n="label.artist">Artist</button>
     <button class="act" id="aAlbum" data-i18n="label.album">Album</button>
-    <button class="act ghost" id="aCancel" data-i18n="common.cancel">Abbrechen</button>
+    <button class="act ghost" id="aCancel" data-i18n="common.cancel">Cancel</button>
   </div>
 </div>
 
 <div class="sheetbg" id="playlistSheetbg">
   <div class="sheet">
-    <h2 data-i18n="playlistSheet.title">Zur Playlist hinzufügen</h2>
+    <h2 data-i18n="playlistSheet.title">Add to playlist</h2>
     <p id="playlistSheetSub"></p>
     <div class="list" id="playlistList" style="max-height:320px;border:1px solid var(--border);margin-bottom:12px;"></div>
-    <button class="act prim" id="plCreate" data-i18n="playlistSheet.createNew">Neue Playlist …</button>
-    <button class="act ghost" id="plCancel" data-i18n="common.cancel">Abbrechen</button>
+    <button class="act prim" id="plCreate" data-i18n="playlistSheet.createNew">New playlist …</button>
+    <button class="act ghost" id="plCancel" data-i18n="common.cancel">Cancel</button>
   </div>
 </div>
 
@@ -695,26 +831,26 @@ html, body {
 /* ==================================================================
    VERSION
    ==================================================================
-   Als "Web-Clip" auf dem Homescreen (iOS "Zum Home-Bildschirm") cacht
-   WebKit ma-dashboard.html teils hartnäckig über Cache-Control-Header
-   und Neustarts hinweg. Bei jedem funktionalen Änderungen an dieser
-   Datei APP_VERSION erhöhen - checkForUpdate() vergleicht sie beim
-   Start, bei jeder Rückkehr in den Vordergrund UND periodisch alle
-   UPDATE_CHECK_INTERVAL_MS gegen die Version, die aktuell tatsächlich
-   auf dem Server liegt (siehe dort). Das periodische Polling ist der
-   eigentlich verlässliche Pfad: Als dauerhaft sichtbares Kiosk-Display
-   bekommt so ein iPad oft wochenlang gar kein echtes visibilitychange/
-   pageshow mehr - ohne Timer bliebe der Update-Check dann faktisch tot.
+   As a homescreen "web clip" (iOS "Add to Home Screen"), WebKit tends to
+   hold onto ma-dashboard.html stubbornly across Cache-Control headers
+   and restarts. Bump APP_VERSION on every functional change to this
+   file - checkForUpdate() compares it on startup, on every return to
+   the foreground, AND periodically every UPDATE_CHECK_INTERVAL_MS
+   against the version actually sitting on the server (see there). The
+   periodic poll is the genuinely reliable path: as a permanently
+   visible kiosk display, an iPad often gets no real visibilitychange/
+   pageshow for weeks - without the timer, the update check would be
+   effectively dead.
    ================================================================== */
-var APP_VERSION = '2026-08-18.3';
+var APP_VERSION = '2026-08-30.1';
 var UPDATE_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 
 /* ==================================================================
-   KONFIGURATION
+   CONFIGURATION
    ==================================================================
-   Die sensiblen und gerätespezifischen Werte werden aus ma-env.js
-   geladen. Fehlt diese Datei oder einzelne Werte, greifen die folgenden
-   Fallback-Defaults.
+   The sensitive and device-specific values are loaded from ma-env.js.
+   If that file or individual values are missing, the following
+   fallback defaults apply.
    ================================================================== */
 if (typeof CFG === 'undefined') { var CFG = {}; }
 if (!CFG.MA) { CFG.MA = ''; }
@@ -727,7 +863,7 @@ if (!CFG.IMG_COVER) { CFG.IMG_COVER = 512; }
 if (!CFG.IMG_THUMB) { CFG.IMG_THUMB = 160; }
 
 /* ==================================================================
-   HILFSFUNKTIONEN (ES5, kein fetch, keine Pfeilfunktionen)
+   HELPER FUNCTIONS (ES5, no fetch, no arrow functions)
    ================================================================== */
 function $(id) { return document.getElementById(id); }
 
@@ -751,138 +887,14 @@ function removeClass(el, cls) {
 }
 
 /* ==================================================================
-   INTERNATIONALISIERUNG (DE/EN)
+   STRINGS (English only)
    ==================================================================
-   Muss so weit oben stehen, weil bereits connect()/send()/bootstrap()
-   beim Start toast(t(...))-Aufrufe machen. t()/currentLang stehen ab
-   hier zur Verfuegung; applyLanguage() selbst wird erst ganz am
-   Scriptende aufgerufen, wenn alle Render-Funktionen definiert sind.
+   Has to sit this high up because connect()/send()/bootstrap() already
+   make toast(t(...)) calls during startup, so t() needs to exist this
+   early. paintStaticUI() itself is only called once, right at the end
+   of the script, once every render function it touches is defined.
    ================================================================== */
-var I18N = {
-  de: {
-    "meta.title": "Musik",
-    "top.brand": "Musik",
-    "top.allPlayers": "Alle Player",
-    "top.group": "Gruppe",
-    "top.otherDevices": "Weitere Geräte",
-    "top.accentColor": "Akzentfarbe",
-    "now.nothingSelected": "Nichts ausgewählt",
-    "now.off": "Aus",
-    "now.nothingPlaying": "Nichts läuft",
-    "now.currentTrackFallback": "Aktueller Titel",
-    "toggle.shuffle": "Zufall",
-    "toggle.repeat": "Wiederholen",
-    "toggle.repeatOne": "Titel wdh.",
-    "toggle.automix": "Automix",
-    "toast.automixOn": "Automix ein",
-    "toast.automixOff": "Automix aus",
-    "vol.label": "Vol",
-    "vol.groupVolumeCollapsed": "Gruppen-Lautstärke ▼",
-    "vol.groupVolumeExpanded": "Gruppen-Lautstärke ▲",
-    "tab.queue": "Warteschlange",
-    "tab.library": "Bibliothek",
-    "tab.search": "Suchen",
-    "search.placeholder": "Titel, Interpret, Album, Playlist",
-    "search.button": "Suchen",
-    "search.hint": "Suchbegriff eingeben. Ein Treffer wird auf dem oben gewählten Player abgespielt.",
-    "search.searching": "Wird gesucht …",
-    "search.error": "Suche fehlgeschlagen ({err}).",
-    "search.noResults": "Keine Treffer. Anderen Filter probieren, oder genauer suchen – z. B. „Billy Joel - A Matter of Trust“.",
-    "search.nothingFound": "Nichts gefunden.",
-    "nav.back": "← Zurück",
-    "crumb.play": "Abspielen",
-    "queue.reload": "Aktualisieren",
-    "queue.clear": "Leeren",
-    "queue.noPlayerHint": "Kein Player gewählt.",
-    "queue.empty": "Warteschlange ist leer.",
-    "queue.loadError": "Warteschlange nicht abrufbar ({err}).",
-    "queue.radioBanner": "📻 <strong>Radiomodus aktiv:</strong> Music Assistant generiert Folgetitel fortlaufend dynamisch.",
-    "queue.shuffleBanner": "🔀 <strong>Zufallswiedergabe aktiv:</strong> Titelreihenfolge wird dynamisch gemischt.",
-    "queue.playingLabel": "Läuft: {label}",
-    "queue.addedLabel": "Zur Warteschlange: {label}",
-    "toast.queueCleared": "Warteschlange geleert",
-    "lib.hint": "Medientyp oben wählen.",
-    "lib.favOnly": "♥ Nur Favoriten",
-    "lyrics.noTrack": "Kein Titel aktiv.",
-    "lyrics.loading": "Songtexte werden geladen …",
-    "lyrics.none": "Keine Songtexte verfügbar.",
-    "lib.noFavorites": "Keine Favoriten vorhanden.",
-    "lib.noEntries": "Keine Einträge vorhanden.",
-    "media.tracks": "Titel",
-    "media.albums": "Alben",
-    "media.artists": "Interpreten",
-    "media.playlists": "Playlists",
-    "media.radio": "Radio",
-    "media.podcasts": "Podcasts",
-    "media.audiobooks": "Hörbücher",
-    "media.topTracks": "Top-Titel",
-    "media.episodes": "Folgen",
-    "filter.all": "Alles",
-    "label.track": "Titel",
-    "label.album": "Album",
-    "label.artist": "Interpret",
-    "label.playlist": "Playlist",
-    "label.podcast": "Podcast",
-    "sort.relevance": "Relevanz",
-    "sort.name": "Name",
-    "sort.year": "Jahr",
-    "sheet.playNow": "Jetzt abspielen",
-    "sheet.playNext": "Als Nächstes",
-    "sheet.addToQueue": "Hinten anhängen",
-    "sheet.addToPlaylist": "Zur Playlist",
-    "sheet.favDefault": "Favorit …",
-    "sheet.goTo": "Gehe zu",
-    "sheet.open": "Öffnen",
-    "sheet.subtitleWithArtist": "{artist} · auf {player}",
-    "sheet.subtitlePlayerOnly": "auf {player}",
-    "sheet.favChecking": "Favorit wird geprüft …",
-    "sheet.favUnavailable": "Favorit nicht verfügbar",
-    "sheet.favRemoveAction": "♥  Favorit entfernen",
-    "sheet.favAddAction": "♡  Zu Favoriten",
-    "playlistSheet.title": "Zur Playlist hinzufügen",
-    "playlistSheet.createNew": "Neue Playlist …",
-    "playlistSheet.empty": "Noch keine Playlist vorhanden.",
-    "playlistSheet.sectionFavorites": "Favoriten",
-    "playlistSheet.sectionAll": "Alle Playlists",
-    "playlistSheet.loadError": "Fehler beim Laden.",
-    "playlistSheet.added": "„{track}“ zu „{playlist}“ hinzugefügt",
-    "playlistSheet.newPrompt": "Name der neuen Playlist:",
-    "playlistSheet.created": "Playlist erstellt. Bitte auswählen.",
-    "playlistSheet.noTrackSelected": "Kein Titel ausgewählt",
-    "fav.removed": "Aus Favoriten entfernt",
-    "fav.added": "Zu Favoriten hinzugefügt",
-    "fav.noElement": "Kein Element",
-    "internal.noUri": "Keine URI",
-    "group.headPrefix": "Gruppe: {name}",
-    "group.noOtherDevices": "Keine weiteren Geräte in der Gruppe.",
-    "group.remove": "Entfernen",
-    "group.noGroupingSupport": "Dieser Player unterstützt keine Gruppierung.",
-    "group.add": "Hinzufügen",
-    "common.cancel": "Abbrechen",
-    "common.loading": "Wird geladen …",
-    "common.loadError": "Konnte nicht geladen werden ({err}).",
-    "common.noPlayerSelected": "Kein Player gewählt",
-    "toast.credentialsMissing": "Zugangsdaten fehlen. ma-env.js anlegen.",
-    "toast.noWebSocket": "Dieser Browser kann kein WebSocket",
-    "toast.loginRejected": "Anmeldung abgelehnt: {err}",
-    "toast.disconnected": "Verbindung getrennt",
-    "toast.noConnection": "Keine Verbindung",
-    "toast.sendFailed": "Senden fehlgeschlagen",
-    "toast.errorCode": "Fehler {code}",
-    "toast.playersUnavailable": "Player nicht abrufbar: {err}",
-    "toast.favFailed": "Favorit fehlgeschlagen: {err}",
-    "toast.playlistsLoadFailed": "Playlists konnten nicht geladen werden: {err}",
-    "toast.addFailed": "Hinzufügen fehlgeschlagen: {err}",
-    "toast.playlistCreateFailed": "Playlist konnte nicht erstellt werden: {err}",
-    "toast.automixFailed": "Automix konnte nicht gesetzt werden: {err}",
-    "toast.commandFailed": "Befehl fehlgeschlagen: {err}",
-    "toast.playFailed": "Abspielen fehlgeschlagen: {err}",
-    "toast.jumpFailed": "Sprung fehlgeschlagen: {err}",
-    "toast.removeFailed": "Entfernen fehlgeschlagen: {err}",
-    "toast.clearFailed": "Leeren fehlgeschlagen: {err}",
-    "toast.updateAvailable": "Neue Version verfügbar – wird geladen …"
-  },
-  en: {
+var STRINGS = {
     "meta.title": "Music",
     "top.brand": "Music",
     "top.allPlayers": "All players",
@@ -1003,26 +1015,19 @@ var I18N = {
     "toast.jumpFailed": "Jump failed: {err}",
     "toast.removeFailed": "Removal failed: {err}",
     "toast.clearFailed": "Could not clear queue: {err}",
-    "toast.updateAvailable": "New version available – reloading …"
-  }
+    "toast.updateAvailable": "New version available – reloading …",
+    "top.quickActions": "Quick Actions",
+    "qa.playMusic": "Play Music",
+    "qa.sleep": "Sleep",
+    "qa.sleeping": "Sleeping …",
+    "radio.empty": "No favorite radio stations yet.",
+    "radio.otherGroup": "Other",
+    "lib.queue": "Queue",
+    "source.all": "All sources"
 };
 
-var LANG_STORAGE_KEY = 'ma-dashboard-lang';
-
-function detectLang() {
-  try {
-    var saved = localStorage.getItem(LANG_STORAGE_KEY);
-    if (saved === 'de' || saved === 'en') { return saved; }
-  } catch (e) { /* Privacy-Modus o.ae. - ignorieren */ }
-  var nav = (navigator.language || navigator.userLanguage || '').toLowerCase();
-  return nav.indexOf('de') === 0 ? 'de' : 'en';
-}
-
-var currentLang = detectLang();
-
 function t(key, vars) {
-  var dict = I18N[currentLang] || I18N.de;
-  var str = (dict && dict[key] !== undefined) ? dict[key] : (I18N.de[key] !== undefined ? I18N.de[key] : key);
+  var str = (STRINGS[key] !== undefined) ? STRINGS[key] : key;
   if (vars) {
     str = str.replace(/\{(\w+)\}/g, function (m, k) {
       return vars[k] !== undefined ? vars[k] : m;
@@ -1042,49 +1047,30 @@ function applyStaticTranslations() {
   }
 }
 
-function updateLangSwitchUI() {
-  $('langDe').className = 'lang-chip' + (currentLang === 'de' ? ' on' : '');
-  $('langEn').className = 'lang-chip' + (currentLang === 'en' ? ' on' : '');
-}
-
-function applyLanguage() {
-  document.documentElement.lang = currentLang;
+/* One-time boot paint (no language switcher anymore, so this only ever
+   runs once - the per-tab setup that used to run here too now happens
+   through switchTab(initialTab) right after this, via TABS[name].init). */
+function paintStaticUI() {
   document.title = t('meta.title');
   applyStaticTranslations();
-  updateLangSwitchUI();
   buildStations();
   renderNow();
   paintAutomix();
-  if (currentTab === 'library') { buildLibFilters(); loadLibrary(currentLibType); }
-  else if (currentTab === 'search') { buildFilters(); renderStack(); }
-  else if (currentTab === 'queue') { loadQueue(); }
-  else { buildLibFilters(); buildFilters(); }
-  if (groupMenuOpen) { renderGroupMenu(); }
-  if (volMembersOpen) { renderVolumeMembers(); }
 }
 
-function setLang(lang) {
-  currentLang = lang;
-  try { localStorage.setItem(LANG_STORAGE_KEY, lang); } catch (e) { /* egal */ }
-  applyLanguage();
-}
-
-$('langDe').onclick = function () { setLang('de'); };
-$('langEn').onclick = function () { setLang('en'); };
-
-/* ---------- Dark/Light Mode ----------
-   Folgt standardmaessig dem System (prefers-color-scheme, per CSS-Media-
-   Query geloest), ein Klick auf themeSwitch setzt eine explizite,
-   in localStorage gemerkte Wahl, die das System-Preference dauerhaft
-   ueberschreibt (data-theme-Attribut auf <html>). Das fruehe Inline-Script
-   im <head> wendet eine gespeicherte Wahl schon vor dem ersten Paint an. */
+/* ---------- Dark/light mode ----------
+   Follows the system by default (prefers-color-scheme, resolved via a
+   CSS media query); a tap on themeSwitch sets an explicit choice, saved
+   in localStorage, that permanently overrides the system preference
+   (via a data-theme attribute on <html>). The early inline <head> script
+   applies a saved choice before the first paint. */
 var THEME_STORAGE_KEY = 'ma-dashboard-theme';
 
 function detectTheme() {
   try {
     var saved = localStorage.getItem(THEME_STORAGE_KEY);
     if (saved === 'light' || saved === 'dark') { return saved; }
-  } catch (e) { /* Privacy-Modus o.ae. - ignorieren */ }
+  } catch (e) { /* private browsing mode or similar - ignore */ }
   return null;
 }
 
@@ -1113,7 +1099,7 @@ function applyTheme() {
 
 function setTheme(theme) {
   currentTheme = theme;
-  try { localStorage.setItem(THEME_STORAGE_KEY, theme); } catch (e) { /* egal */ }
+  try { localStorage.setItem(THEME_STORAGE_KEY, theme); } catch (e) { /* fine either way */ }
   applyTheme();
 }
 
@@ -1130,18 +1116,18 @@ if (window.matchMedia) {
   else if (mq.addListener) { mq.addListener(onSchemeChange); }
 }
 
-/* ---------- Akzentfarbe ----------
-   ACCENT_PRESETS, ACCENT_STORAGE_KEY, die Farb-Konvertierungshelfer und
-   applyAccentOverride() sind bereits im fruehen Inline-Script im <head>
-   definiert (gleicher FOUC-Grund wie beim Theme) und stehen hier als
-   globale Funktionen zur Verfuegung. */
+/* ---------- Accent color ----------
+   ACCENT_PRESETS, ACCENT_STORAGE_KEY, the color-conversion helpers and
+   applyAccentOverride() are already defined in the early inline <head>
+   script (same FOUC reasoning as the theme) and are available here as
+   global functions. */
 var accentMenuOpen = false;
 
 function currentAccent() {
   try {
     var saved = localStorage.getItem(ACCENT_STORAGE_KEY);
     if (saved) { return saved; }
-  } catch (e) { /* Privacy-Modus o.ae. - ignorieren */ }
+  } catch (e) { /* private browsing mode or similar - ignore */ }
   return ACCENT_PRESETS[0];
 }
 
@@ -1166,9 +1152,9 @@ function renderAccentSwatches() {
 
 function setAccent(hex) {
   if (hex === ACCENT_PRESETS[0]) {
-    try { localStorage.removeItem(ACCENT_STORAGE_KEY); } catch (e) { /* egal */ }
+    try { localStorage.removeItem(ACCENT_STORAGE_KEY); } catch (e) { /* fine either way */ }
   } else {
-    try { localStorage.setItem(ACCENT_STORAGE_KEY, hex); } catch (e) { /* egal */ }
+    try { localStorage.setItem(ACCENT_STORAGE_KEY, hex); } catch (e) { /* fine either way */ }
   }
   applyAccentOverride();
   updateAccentSwitchUI();
@@ -1205,12 +1191,12 @@ function fmt(sec) {
 }
 
 /* ------------------------------------------------------------------
-   Serveruhr. MA verankert die Abspielposition an einem Server-Zeit-
-   stempel (elapsed_time_last_updated, Unix-Sekunden). Geht die Uhr des
-   iPads falsch, wäre der Fortschrittsbalken um genau diese Differenz
-   daneben - deshalb einmal beim Start den Date-Header des Servers
-   auswerten. /info schickt CORS-Header, der Date-Header ist ohne
-   Expose-Header lesbar.
+   Server clock. MA anchors the playback position to a server-side
+   timestamp (elapsed_time_last_updated, Unix seconds). If the iPad's
+   own clock is off, the progress bar would be off by exactly that
+   difference - so read the server's Date header once at startup.
+   /info sends CORS headers, and the Date header is readable without an
+   Expose-Header.
 ------------------------------------------------------------------ */
 var clockSkew = 0;
 function serverNow() { return Date.now() / 1000 + clockSkew; }
@@ -1227,22 +1213,21 @@ function probeClock() {
     if (isNaN(parsedMs)) { return; }
     clockSkew = parsedMs / 1000 - Date.now() / 1000;
   };
-  try { x.send(null); } catch (e3) { /* egal, dann bleibt skew 0 */ }
+  try { x.send(null); } catch (e3) { /* fine either way, skew just stays 0 */ }
 }
 
 /* ------------------------------------------------------------------
-   Update-Check für den iOS-Homescreen-Webclip. WebKit hält den einmal
-   "Zum Home-Bildschirm" hinzugefügten Snapshot von ma-dashboard.html
-   hartnäckig fest - auch über die Cache-Control-Meta-Tags im <head>,
-   über App-Neustarts hinweg, und teils auch über lange Server-seitige
-   Cache-Control-Header hinweg (z. B. wenn die Datei wie bei Home
-   Assistants /local-Static-Route mit langer Lebensdauer ausgeliefert
-   wird). Deshalb wird die Datei aktiv per XHR (mit cache-bustendem
-   Query-String plus expliziten No-Cache-Request-Headern) frisch vom
-   Server geholt und die darin enthaltene APP_VERSION mit der gerade
-   laufenden verglichen. Weicht sie ab, wird hart auf eine neue URL
-   navigiert (anderer Query-String), damit WebKit nicht wieder die
-   gecachte Fassung ausliefert.
+   Update check for the iOS homescreen web clip. WebKit stubbornly holds
+   onto the "Add to Home Screen" snapshot of ma-dashboard.html - even
+   across the Cache-Control meta tags in <head>, across app restarts,
+   and sometimes even across long server-side Cache-Control headers
+   (e.g. when the file is served the way Home Assistant's /local static
+   route does, with a long lifetime). So the file is actively re-fetched
+   via XHR (with a cache-busting query string plus explicit no-cache
+   request headers) fresh from the server, and the APP_VERSION inside it
+   is compared against the one currently running. If it differs, this
+   hard-navigates to a new URL (different query string) so WebKit
+   doesn't serve the cached copy again.
 ------------------------------------------------------------------ */
 function checkForUpdate() {
   if (location.protocol === 'file:') { return; }
@@ -1250,9 +1235,9 @@ function checkForUpdate() {
   var x = new XMLHttpRequest();
   try { x.open('GET', url, true); } catch (e) { return; }
   x.timeout = 10000;
-  x.ontimeout = function () { /* egal, der naechste Intervall-Tick versucht es erneut */ };
-  try { x.setRequestHeader('Cache-Control', 'no-cache'); } catch (eh) { /* egal */ }
-  try { x.setRequestHeader('Pragma', 'no-cache'); } catch (eh2) { /* egal */ }
+  x.ontimeout = function () { /* fine, the next interval tick will try again */ };
+  try { x.setRequestHeader('Cache-Control', 'no-cache'); } catch (eh) { /* fine either way */ }
+  try { x.setRequestHeader('Pragma', 'no-cache'); } catch (eh2) { /* fine either way */ }
   x.onreadystatechange = function () {
     if (x.readyState !== 4 || x.status !== 200 || !x.responseText) { return; }
     var m = x.responseText.match(/APP_VERSION\s*=\s*'([^']+)'/);
@@ -1261,14 +1246,14 @@ function checkForUpdate() {
       setTimeout(function () { location.href = url; }, 1200);
     }
   };
-  try { x.send(null); } catch (e2) { /* egal, dann bleibt die aktuelle Version aktiv */ }
+  try { x.send(null); } catch (e2) { /* fine, the current version just stays active */ }
 }
 
 /* ------------------------------------------------------------------
-   Bilder. MA liefert zu jedem Bild eine proxy_id; darüber skaliert der
-   Server das Bild auf die gewünschte Kantenlänge. Das ist auf einem
-   alten iPad der Unterschied zwischen flüssig und zäh - ein Original-
-   Cover kann mehrere Megabyte haben.
+   Images. MA supplies a proxy_id for every image; the server uses it to
+   scale the image down to the requested edge length. On an old iPad
+   that's the difference between smooth and sluggish - an original
+   cover can be several megabytes.
 ------------------------------------------------------------------ */
 function firstImage(images) {
   if (!images || !images.length) { return null; }
@@ -1308,10 +1293,10 @@ function imgUrl(it, size) {
   return null;
 }
 
-/* current_media.image_url ist eine fertige URL, die MA aus seiner eigenen
-   base_url baut. Ist die intern falsch konfiguriert (klassischer Fall bei
-   Reverse-Proxy oder Docker-Bridge), zeigt sie ins Leere - deshalb den
-   Host für unsere eigenen Proxy-URLs auf CFG.MA umbiegen. */
+/* current_media.image_url is a ready-made URL that MA builds from its
+   own base_url. If that's misconfigured internally (a classic case with
+   a reverse proxy or a Docker bridge), it points nowhere - so redirect
+   the host for our own proxy URLs to CFG.MA instead. */
 function fixUrl(u, size) {
   if (!u) { return null; }
   var i = u.indexOf('/imageproxy/');
@@ -1346,23 +1331,46 @@ function artistsOf(it) {
 
 function svgIcon(kind) {
   var c = '#f0a32e', p;
-  if (kind === 'prev') { p = '<path d="M8 8v16h3V8H8zm4 8l12 8V8l-12 8z" fill="' + c + '"/>'; }
-  else if (kind === 'next') { p = '<path d="M24 8v16h-3V8h3zm-4 8L8 24V8l12 8z" fill="' + c + '"/>'; }
-  else if (kind === 'pause') { p = '<rect x="10" y="8" width="4.5" height="16" fill="' + c + '"/><rect x="17.5" y="8" width="4.5" height="16" fill="' + c + '"/>'; }
-  else { p = '<path d="M11 7l14 9-14 9V7z" fill="' + c + '"/>'; }
-  return '<svg width="32" height="32" viewBox="0 0 32 32">' + p + '</svg>';
+  if (kind === 'prev') { p = '<path d="M8 8v16h3V8H8zm4 8l12 8V8l-12 8z" fill="' + c + '"/>'; return '<svg width="32" height="32" viewBox="0 0 32 32">' + p + '</svg>'; }
+  if (kind === 'next') { p = '<path d="M24 8v16h-3V8h3zm-4 8L8 24V8l12 8z" fill="' + c + '"/>'; return '<svg width="32" height="32" viewBox="0 0 32 32">' + p + '</svg>'; }
+  if (kind === 'pause') { p = '<rect x="10" y="8" width="4.5" height="16" fill="' + c + '"/><rect x="17.5" y="8" width="4.5" height="16" fill="' + c + '"/>'; return '<svg width="32" height="32" viewBox="0 0 32 32">' + p + '</svg>'; }
+  if (kind === 'play') { p = '<path d="M11 7l14 9-14 9V7z" fill="' + c + '"/>'; return '<svg width="32" height="32" viewBox="0 0 32 32">' + p + '</svg>'; }
+
+  /* Footer navigation icons: stroke="currentColor" so they pick up the
+     .footer .tab / .footer .tab.on text color (secondary/accent) for
+     free, instead of needing separate on/off artwork like the transport
+     icons above. */
+  if (kind === 'now') {
+    p = '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/>' +
+        '<path d="M10 8.3l6.2 3.7-6.2 3.7z" fill="currentColor"/>';
+  } else if (kind === 'radio') {
+    p = '<circle cx="12" cy="16.2" r="1.7" fill="currentColor"/>' +
+        '<path d="M8.4 13a5.2 5.2 0 0 1 7.2 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' +
+        '<path d="M5.8 10.1a9 9 0 0 1 12.4 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>';
+  } else if (kind === 'library') {
+    p = '<rect x="4" y="6" width="3" height="14" fill="currentColor"/>' +
+        '<rect x="9.2" y="3" width="3" height="17" fill="currentColor"/>' +
+        '<rect x="14.4" y="8" width="3" height="12" fill="currentColor"/>' +
+        '<rect x="19.6" y="5.5" width="2.4" height="14.5" fill="currentColor"/>';
+  } else if (kind === 'search') {
+    p = '<circle cx="10.4" cy="10.4" r="6.4" fill="none" stroke="currentColor" stroke-width="1.7"/>' +
+        '<path d="M15.2 15.2L21 21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>';
+  } else {
+    p = '';
+  }
+  return '<svg width="24" height="24" viewBox="0 0 24 24">' + p + '</svg>';
 }
 
 /* ==================================================================
-   WEBSOCKET-CLIENT
+   WEBSOCKET CLIENT
    ==================================================================
-   Bewusst WebSocket statt der POST-/api-Route: die JSON-RPC-Route von
-   MA schickt keine CORS-Header, ein XHR von einer fremden Herkunft
-   scheitert also schon am Preflight. WebSocket-Handshakes unterliegen
-   der Same-Origin-Policy nicht - damit läuft diese Datei von überall,
-   auch direkt von der Festplatte des iPads.
-   Nebeneffekt: Zustandsänderungen kommen als Ereignis herein, es muss
-   nichts mehr im Sekundentakt abgefragt werden.
+   Deliberately WebSocket instead of the POST /api route: MA's JSON-RPC
+   route doesn't send CORS headers, so an XHR from a foreign origin
+   already fails at the preflight. WebSocket handshakes aren't subject
+   to the same-origin policy - so this file runs from anywhere, even
+   directly off the iPad's own storage.
+   Side effect: state changes arrive as events, nothing needs to be
+   polled every second anymore.
    ================================================================== */
 var ws = null;
 var wsOpen = false;
@@ -1399,7 +1407,7 @@ function connect() {
   }
   ws.onopen = function () {
     wsOpen = true;
-    /* Erstes Kommando muss laut MA-Protokoll auth sein. */
+    /* The MA protocol requires the first command to be auth. */
     send('auth', { token: CFG.TOKEN }, function (err) {
       if (err) {
         wsAuthed = false;
@@ -1462,11 +1470,11 @@ function onMessage(raw) {
   var msg;
   try { msg = JSON.parse(raw); } catch (e) { return; }
 
-  /* Ereignis-Nachricht */
+  /* Event message */
   if (msg.event) { handleEvent(msg); return; }
 
   var id = msg.message_id;
-  if (!id) { return; }                 /* server_info u.ä. */
+  if (!id) { return; }                 /* server_info and the like */
   var p = pending[id];
   if (!p) { return; }
 
@@ -1476,8 +1484,8 @@ function onMessage(raw) {
     return;
   }
 
-  /* Lange Listen kommen in Blöcken zu 500 mit partial:true herein und
-     werden erst von der letzten (partial-losen) Nachricht abgeschlossen. */
+  /* Long lists arrive in chunks of up to 500 with partial:true, and are
+     only completed by the final, non-partial message. */
   if (msg.partial) {
     if (!p.chunks) { p.chunks = []; }
     if (msg.result && msg.result.length) {
@@ -1498,23 +1506,23 @@ function onMessage(raw) {
 }
 
 /* ==================================================================
-   ZUSTAND
+   STATE
    ================================================================== */
 var players = {};        /* player_id -> PlayerState */
-var playerIds = [];      /* Anzeigereihenfolge */
+var playerIds = [];      /* display order */
 var queues = {};         /* queue_id -> PlayerQueue */
-var activeId = null;     /* gewählter Player */
+var activeId = null;     /* the selected player */
 var activeQueueId = null;
 
-/* Fortschritt wird lokal hochgezählt. MA schickt seit der Umstellung auf
-   "exakte" Zustandsänderungen keine Positions-Ticks mehr im Sekundentakt:
-   elapsed_time/elapsed_time_last_updated ändern sich nur noch bei Start,
-   Pause, Sprung und Titelwechsel. Wer den Wert bloß anzeigt, bekommt einen
-   stehenden Balken, der erst beim Pausieren nachspringt - genau das
-   Verhalten der alten HA-Fassung. Richtig ist: Anker merken und selbst
-   weiterzählen. */
-var anchorPos = 0;       /* Sekunden im Titel zum Ankerzeitpunkt */
-var anchorAt = 0;        /* Server-Unixzeit des Ankers */
+/* Progress is counted up locally. Since MA switched to "exact" state
+   changes, it no longer sends position ticks once a second:
+   elapsed_time/elapsed_time_last_updated now only change on start,
+   pause, seek, and track change. Anyone who just displays the value
+   raw gets a bar that stands still and only jumps on pause - exactly
+   the old HA version's behavior. The correct approach: remember an
+   anchor and count onward from it yourself. */
+var anchorPos = 0;       /* seconds into the track at the anchor point */
+var anchorAt = 0;        /* server Unix time of the anchor */
 var isPlaying = false;
 var curDur = 0;
 var volDragging = false;
@@ -1567,15 +1575,16 @@ function resolveGroupMembers(id, filterVolume) {
 function getGroupMembers(id) { return resolveGroupMembers(id, true); }
 
 /* ==================================================================
-   START NACH ANMELDUNG
+   STARTUP AFTER LOGIN
    ================================================================== */
 function isPlayerUsable(p) {
   return !!(p && p.available !== false && p.enabled !== false);
 }
 
-/* Ohne (nutzbaren) CFG.DEFAULT_PLAYER wird der Player/die Gruppe vorausgewählt,
-   die gerade spielt (players[].state ist bereits aus players/all bekannt, noch
-   bevor player_queues/all beantwortet ist), sonst der erste aus playerIds. */
+/* Without a (usable) CFG.DEFAULT_PLAYER, the player/group that's
+   currently playing is preselected (players[].state is already known
+   from players/all, even before player_queues/all has answered),
+   otherwise the first one from playerIds. */
 function pickDefaultPlayer() {
   if (CFG.DEFAULT_PLAYER && isPlayerUsable(players[CFG.DEFAULT_PLAYER])) {
     return CFG.DEFAULT_PLAYER;
@@ -1619,12 +1628,12 @@ function rebuildPlayerOrder() {
       if (players[CFG.PLAYERS[i]]) { ids.push(CFG.PLAYERS[i]); }
     }
   } else {
-    /* Gruppenmitgliedschaft wird nicht immer auf dem Mitglied selbst
-       gespiegelt (synced_to/active_group) - manche MA-Player tragen sie
-       nur auf dem Gruppenleiter (group_members/group_childs). Beide Wege
-       einsammeln, sonst bleibt ein Mitglied in playerIds und taucht -
-       weil sein eigener state oft ebenfalls "playing" meldet - kurzzeitig
-       als zweite "aktive" Station neben dem eigentlich gewählten Player auf. */
+    /* Group membership isn't always mirrored on the member itself
+       (synced_to/active_group) - some MA players only carry it on the
+       group leader (group_members/group_childs). Collect both paths,
+       otherwise a member stays in playerIds and briefly shows up as a
+       second "active" station next to the actually selected player,
+       since its own state often also reports "playing". */
     var memberIds = {};
     for (var mk in players) {
       if (!players.hasOwnProperty(mk)) { continue; }
@@ -1639,7 +1648,7 @@ function rebuildPlayerOrder() {
       if (p.available === false) { continue; }
       if (p.enabled === false) { continue; }
       if (p.hidden || p.hide_in_ui) { continue; }
-      /* In eine Gruppe eingebundene Player doppeln nur die Liste. */
+      /* Players folded into a group would only duplicate the list. */
       if (p.synced_to || p.active_group || memberIds[k]) { continue; }
       ids.push(k);
     }
@@ -1664,17 +1673,17 @@ function selectPlayer(id, force) {
       queues[q.queue_id] = q;
       activeQueueId = q.queue_id;
     } else {
-      activeQueueId = id;   /* MA benennt die Queue in aller Regel wie den Player */
+      activeQueueId = id;   /* MA usually names the queue after the player */
     }
     adoptQueue(activeQueue());
     renderNow();
     loadCrossfadeState();
-    if (currentTab === 'queue') { loadQueue(); }
+    if (currentTab === 'library' && currentLibType === 'queue') { loadQueue(); }
   });
 }
 
 /* ==================================================================
-   KOPFZEILE
+   HEADER
    ================================================================== */
 function isPlayerPlaying(pid) {
   var p = players[pid] || {};
@@ -1749,7 +1758,7 @@ function buildStations() {
 }
 
 /* ==================================================================
-   EREIGNISSE
+   EVENTS
    ================================================================== */
 function handleEvent(msg) {
   var evt = msg.event;
@@ -1761,7 +1770,8 @@ function handleEvent(msg) {
       players[pid] = msg.data;
       if (!known) { rebuildPlayerOrder(); }
       if (pid === activeId) { renderNow(); }
-      else if ($('volMembers').style.display === 'block' && $('mvol_' + pid)) { renderVolumeMembers(); }
+      else if (($('volMembers').style.display === 'block' && $('mvol_' + pid)) ||
+               ($('volMembersBig').style.display === 'block' && $('mvolBig_' + pid))) { renderVolumeMembers(); }
       buildStations();
       if (groupMenuOpen) { renderGroupMenu(); positionGroupMenu(activeChipEl()); }
     }
@@ -1779,14 +1789,14 @@ function handleEvent(msg) {
         adoptQueue(msg.data);
         renderNow();
         loadCrossfadeState();
-        if (currentTab === 'queue') { loadQueue(); }
+        if (currentTab === 'library' && currentLibType === 'queue') { loadQueue(); }
       }
       buildStations();
     }
     return;
   }
   if (evt === 'queue_time_updated') {
-    /* Kommt nur bei Sprüngen (Seek, Pufferkorrektur) - Anker neu setzen. */
+    /* Only fires on jumps (seek, buffer correction) - reset the anchor. */
     if (msg.object_id === activeQueueId) {
       anchorPos = typeof msg.data === 'number' ? msg.data : 0;
       anchorAt = serverNow();
@@ -1795,17 +1805,17 @@ function handleEvent(msg) {
     return;
   }
   if (evt === 'queue_items_updated') {
-    if (msg.object_id === activeQueueId && currentTab === 'queue') { loadQueue(); }
+    if (msg.object_id === activeQueueId && currentTab === 'library' && currentLibType === 'queue') { loadQueue(); }
     return;
   }
   if (evt === 'media_item_updated' || evt === 'media_item_added' || evt === 'media_item_deleted') {
-    /* Favoritenstand kann sich geändert haben - betrifft nur die Anzeige. */
+    /* Favorite status may have changed - only affects the display. */
     refreshNowFav();
     return;
   }
 }
 
-/* Positionsanker aus einem Queue-Zustand übernehmen. */
+/* Takes over the position anchor from a queue state. */
 function adoptQueue(q) {
   if (!q) {
     anchorPos = 0; anchorAt = serverNow(); isPlaying = false; curDur = 0;
@@ -1821,33 +1831,98 @@ function adoptQueue(q) {
    NOW PLAYING
    ================================================================== */
 var lastCoverSrc = '';
-var npUri = null;          /* URI des laufenden Titels, für den Favoritenknopf */
-var npTrack = null;        /* volles Track-Objekt des laufenden Titels, fuer metadata/get_track_lyrics */
-var npFav = null;          /* aufgelöstes Bibliothekselement oder null */
+var npUri = null;          /* URI of the current track, for the favorite button */
+var npTrack = null;        /* full track object of the current track, for metadata/get_track_lyrics */
+var npFav = null;          /* resolved library item, or null */
 
-var npLyricsForUri = null;      /* welche URI die aktuell zwischengespeicherten npLyrics*-Werte betrifft */
-var npLyricsLoaded = false;      /* ob für npLyricsForUri bereits eine definitive Antwort da ist */
-var npLyricsPlain = null;        /* Lyrics-Klartext oder null */
-var npLyricsLrc = null;          /* geparste LRC-Lyrics, [{time, text}, ...] sortiert, oder null */
-var lyricsPrevTab = 'queue';     /* Tab, zu dem beim Schließen der Songtextansicht zurückgeschaltet wird */
-var lyricsActiveLineIdx = -1;    /* Index der aktuell hervorgehobenen LRC-Zeile */
-var lyricsLineEls = null;        /* DOM-Referenzen der gerenderten .lyric-line-Elemente */
+var npLyricsForUri = null;      /* which URI the currently cached npLyrics* values belong to */
+var npLyricsLoaded = false;      /* whether a definitive answer for npLyricsForUri has arrived */
+var npLyricsPlain = null;        /* plain-text lyrics, or null */
+var npLyricsLrc = null;          /* parsed LRC lyrics, [{time, text}, ...] sorted, or null */
+var nowLyricsOpen = false;       /* whether the Now Playing page is currently showing the lyrics view */
+var lyricsActiveLineIdx = -1;    /* index of the currently highlighted LRC line */
+var lyricsLineEls = null;        /* DOM references of the rendered .lyric-line elements */
 
-/* Blendet ein neues Cover-Element (img oder Platzhalter-div) über das
-   bisherige, statt es hart per innerHTML zu ersetzen. Beide liegen dank
-   position:absolute übereinander; nach der Transition wird das alte
-   Element entfernt. */
+/* The compact controls (shown in the Library/Search pages) and the
+   full-screen Now Playing controls are two physical sets of elements
+   sharing the same ids with a "Big" suffix on the second set - these
+   helpers write to both from a single call instead of every render
+   function having to duplicate itself. */
+var NP_SUFFIXES = ['', 'Big'];
+function npEls(base) {
+  var out = [];
+  for (var i = 0; i < NP_SUFFIXES.length; i++) {
+    var el = $(base + NP_SUFFIXES[i]);
+    if (el) { out.push(el); }
+  }
+  return out;
+}
+function npText(base, s) {
+  var els = npEls(base);
+  for (var i = 0; i < els.length; i++) { setText(els[i], s); }
+}
+function npClass(base, cls) {
+  var els = npEls(base);
+  for (var i = 0; i < els.length; i++) { els[i].className = cls; }
+}
+function npHtml(base, html) {
+  var els = npEls(base);
+  for (var i = 0; i < els.length; i++) { els[i].innerHTML = html; }
+}
+function npOn(base, evt, handler) {
+  var els = npEls(base);
+  for (var i = 0; i < els.length; i++) { els[i][evt] = handler; }
+}
+
+/* Fades a new cover element (img or placeholder div) in over the
+   previous one instead of hard-swapping it via innerHTML. Both sit on
+   top of each other thanks to position:absolute; the old element is
+   only removed once the transition has finished. */
 function crossfadeCover(cov, el) {
   var old = [], i;
   for (i = 0; i < cov.childNodes.length; i++) { old.push(cov.childNodes[i]); }
   cov.appendChild(el);
-  el.offsetHeight; /* Reflow erzwingen, damit die Transition ab opacity:0 startet */
+  el.offsetHeight; /* force a reflow so the transition starts from opacity:0 */
   addClass(el, 'show');
   setTimeout(function () {
     for (var j = 0; j < old.length; j++) {
       if (old[j].parentNode === cov) { cov.removeChild(old[j]); }
     }
   }, 420);
+}
+
+/* Best-effort background gradient for the full-screen Now Playing page,
+   sampled from the cover art via an offscreen canvas. Runs against a
+   separate probe Image (crossOrigin='anonymous') rather than the one
+   actually shown in the cover, so a server that doesn't send permissive
+   CORS headers on /imageproxy responses can never break cover loading
+   itself - worst case this probe simply fails and the page keeps its
+   flat --bg background. */
+function updateNowGradient(url) {
+  var page = $('pageNow');
+  if (!page) { return; }
+  var probe = new Image();
+  probe.crossOrigin = 'anonymous';
+  probe.onload = function () {
+    try {
+      var c = document.createElement('canvas');
+      c.width = 12; c.height = 12;
+      var ctx = c.getContext('2d');
+      ctx.drawImage(probe, 0, 0, 12, 12);
+      var a = ctx.getImageData(2, 2, 1, 1).data;
+      var b = ctx.getImageData(9, 9, 1, 1).data;
+      page.style.backgroundImage =
+        'linear-gradient(135deg, rgba(' + a[0] + ',' + a[1] + ',' + a[2] + ',0.5), rgba(' + b[0] + ',' + b[1] + ',' + b[2] + ',0.5))';
+    } catch (e) {
+      page.style.backgroundImage = 'none'; /* tainted canvas - no CORS headers from the server */
+    }
+  };
+  probe.onerror = function () { page.style.backgroundImage = 'none'; };
+  probe.src = url;
+}
+function clearNowGradient() {
+  var page = $('pageNow');
+  if (page) { page.style.backgroundImage = 'none'; }
 }
 
 function renderNow() {
@@ -1864,75 +1939,83 @@ function renderNow() {
   if (!title) {
     title = (p.powered === false) ? t('now.off') : t('now.nothingPlaying');
   }
-  setText($('title'), title);
-  setText($('artist'), artist);
-  setText($('album'), albumName);
+  npText('title', title);
+  npText('artist', artist);
+  npText('album', albumName);
 
-  /* Interpret/Album antippbar machen, wenn wir ein echtes Medienobjekt haben */
+  /* Make artist/album tappable when we have a real media object */
   wireNowNav(mi);
 
   var pic = fixUrl(media.image_url, CFG.IMG_COVER) || imgUrl(mi, CFG.IMG_COVER) || imgUrl(media, CFG.IMG_COVER);
-  var cov = $('cover');
+  var covs = npEls('cover');
   if (pic && lastCoverSrc !== pic) {
     lastCoverSrc = pic;
     var im = new Image();
-    im.onload = function () { crossfadeCover(cov, im); };
+    im.onload = function () {
+      for (var ci = 0; ci < covs.length; ci++) { crossfadeCover(covs[ci], ci === 0 ? im : im.cloneNode(true)); }
+      updateNowGradient(pic);
+    };
     im.onerror = function () {
       lastCoverSrc = '';
-      var ph = document.createElement('div');
-      ph.className = 'ph';
-      ph.innerHTML = '&#9835;';
-      crossfadeCover(cov, ph);
+      clearNowGradient();
+      for (var ei = 0; ei < covs.length; ei++) {
+        var ph = document.createElement('div');
+        ph.className = 'ph';
+        ph.innerHTML = '&#9835;';
+        crossfadeCover(covs[ei], ph);
+      }
     };
     im.src = pic;
   } else if (!pic && lastCoverSrc !== '') {
     lastCoverSrc = '';
-    var ph2 = document.createElement('div');
-    ph2.className = 'ph';
-    ph2.innerHTML = '&#9835;';
-    crossfadeCover(cov, ph2);
+    clearNowGradient();
+    for (var pi = 0; pi < covs.length; pi++) {
+      var ph2 = document.createElement('div');
+      ph2.className = 'ph';
+      ph2.innerHTML = '&#9835;';
+      crossfadeCover(covs[pi], ph2);
+    }
   }
 
   isPlaying = q ? (q.state === 'playing') : (p.state === 'playing');
-  $('bPlay').innerHTML = svgIcon(isPlaying ? 'pause' : 'play');
+  npHtml('bPlay', svgIcon(isPlaying ? 'pause' : 'play'));
 
   curDur = (item && item.duration) || media.duration || 0;
 
   if (q) {
-    $('bShuffle').className = 'tgl' + (q.shuffle_enabled ? ' on' : '');
+    npClass('bShuffle', 'tgl' + (q.shuffle_enabled ? ' on' : ''));
     var rm = q.repeat_mode || 'off';
-    $('bRepeat').className = 'tgl' + (rm !== 'off' ? ' on' : '');
-    setText($('bRepeat'), rm === 'one' ? t('toggle.repeatOne') : t('toggle.repeat'));
+    npClass('bRepeat', 'tgl' + (rm !== 'off' ? ' on' : ''));
+    npText('bRepeat', rm === 'one' ? t('toggle.repeatOne') : t('toggle.repeat'));
   }
 
   var v = (p.volume_level === null || p.volume_level === undefined) ? p.group_volume : p.volume_level;
   if (v !== null && v !== undefined && !volDragging) {
     var vi = Math.round(v);
-    $('vol').value = vi;
-    setText($('volVal'), vi);
+    var volEls = npEls('vol');
+    for (var vj = 0; vj < volEls.length; vj++) { volEls[vj].value = vi; }
+    npText('volVal', vi);
   }
 
   renderVolumeMembers();
 
-  /* Favoritenknopf */
+  /* Favorite button */
   var uri = media.uri || (mi && mi.uri) || null;
-  if (mi) { npTrack = mi; } /* haelt npTrack aktuell, auch falls mi kurz nach dem URI-Wechsel nachliefert */
+  if (mi) { npTrack = mi; } /* keeps npTrack current even if mi arrives slightly after the URI change */
   if (uri !== npUri) {
     npUri = uri;
     npTrack = mi;
     npFav = null;
     paintNowHeart();
     refreshNowFav();
-    if (currentTab === 'lyrics') { refreshNowLyrics(); }
+    if (currentTab === 'now' && nowLyricsOpen) { refreshNowLyrics(); }
   }
 
-  /* Playlist-Plus-Knopf */
-  var addBtn = $('npAdd');
-  if (npUri) {
-    addBtn.className = 'heart';
-    addBtn.innerHTML = '<span>&#43;</span>';
-  } else {
-    addBtn.className = 'heart hide';
+  /* Add-to-playlist button */
+  var addEls = npEls('npAdd');
+  for (var ai = 0; ai < addEls.length; ai++) {
+    if (npUri) { addEls[ai].className = 'heart'; addEls[ai].innerHTML = '<span>&#43;</span>'; }
+    else { addEls[ai].className = 'heart hide'; }
   }
 
   paintLyricsButton();
@@ -1940,17 +2023,28 @@ function renderNow() {
   tick();
 }
 
+/* Builds the group-member volume sliders for both the compact and the
+   full-screen Now Playing controls (see the npEls() family above) -
+   each set gets its own row ids (mvol<suffix>_<playerId>) so the two
+   DOM subtrees never collide. */
 function renderVolumeMembers() {
   var members = activeId ? getGroupMembers(activeId) : [];
-  var wrap = $('volExp');
-  var hit = $('volExpHit');
-  var box = $('volMembers');
+  for (var s = 0; s < NP_SUFFIXES.length; s++) {
+    renderVolumeMembersFor(NP_SUFFIXES[s], members);
+  }
+}
+
+function renderVolumeMembersFor(suffix, members) {
+  var wrap = $('volExp' + suffix);
+  var hit = $('volExpHit' + suffix);
+  var box = $('volMembers' + suffix);
+  if (!wrap || !hit || !box) { return; }
 
   if (!members.length) {
     wrap.style.display = 'none';
     box.style.display = 'none';
     box.innerHTML = '';
-    volMembersOpen = false;
+    if (suffix === '') { volMembersOpen = false; }
     hit.className = 'vol-exp-hit';
     setText(hit, t('vol.groupVolumeCollapsed'));
     return;
@@ -1961,8 +2055,11 @@ function renderVolumeMembers() {
   setText(hit, volMembersOpen ? t('vol.groupVolumeExpanded') : t('vol.groupVolumeCollapsed'));
   box.style.display = volMembersOpen ? 'block' : 'none';
 
-  /* Nur bei Bedarf neu aufbauen, damit Slider nicht während der Interaktion
-     ersetzt werden. Einfacher Weg: alle nicht gerade gezogenen Member neu malen. */
+  var rowPrefix = 'mvol' + suffix + '_';
+
+  /* Only rebuild when actually needed, so sliders don't get replaced out
+     from under an in-progress drag. Simple approach: repaint every
+     member that isn't currently being dragged. */
   var dirty = false;
   for (var i = 0; i < members.length; i++) {
     var mid = members[i];
@@ -1970,7 +2067,7 @@ function renderVolumeMembers() {
     var mp = players[mid];
     var lvl = 0;
     if (mp && mp.volume_level !== null && mp.volume_level !== undefined) { lvl = Math.round(mp.volume_level); }
-    var row = document.getElementById('mvol_' + mid);
+    var row = document.getElementById(rowPrefix + mid);
     if (!row) {
       dirty = true;
       break;
@@ -1992,7 +2089,7 @@ function renderVolumeMembers() {
 
     var row2 = document.createElement('div');
     row2.className = 'vol';
-    row2.id = 'mvol_' + m;
+    row2.id = rowPrefix + m;
     row2.setAttribute('data-mid', m);
 
     var lbl = document.createElement('div');
@@ -2014,18 +2111,18 @@ function renderVolumeMembers() {
     row2.appendChild(vdiv);
     box.appendChild(row2);
 
-    (function (memberId, slider) {
+    (function (memberId, slider, idPrefix) {
       slider.addEventListener('touchstart', function () { memberVolDragging[memberId] = true; }, false);
       slider.addEventListener('mousedown', function () { memberVolDragging[memberId] = true; }, false);
       slider.addEventListener('input', function () {
-        var r = $('mvol_' + memberId);
+        var r = document.getElementById(idPrefix + memberId);
         if (r) { setText(r.getElementsByClassName('val')[0], slider.value); }
       }, false);
       slider.addEventListener('change', function () {
         memberVolDragging[memberId] = false;
         cmd('players/cmd/volume_set', { player_id: memberId, volume_level: parseInt(slider.value, 10) });
       }, false);
-    })(m, inp);
+    })(m, inp, rowPrefix);
   }
 }
 
@@ -2134,20 +2231,26 @@ function positionGroupMenu(chipEl) {
 }
 
 function wireNowNav(mi) {
-  var aEl = $('artist'), alEl = $('album');
-  aEl.className = 'sub';
-  alEl.className = 'sub album';
-  aEl.onclick = null;
-  alEl.onclick = null;
-  if (!mi) { return; }
-  var art = (mi.artists && mi.artists.length) ? mi.artists[0] : (mi.artist || null);
-  if (art && art.item_id) {
-    aEl.className = 'sub tap';
-    aEl.onclick = function () { enterDetail(); openArtist(art); };
+  var art = (mi && mi.artists && mi.artists.length) ? mi.artists[0] : (mi && mi.artist || null);
+  var artistEls = npEls('artist');
+  for (var ai = 0; ai < artistEls.length; ai++) {
+    var aEl = artistEls[ai];
+    aEl.className = 'sub';
+    aEl.onclick = null;
+    if (art && art.item_id) {
+      aEl.className = 'sub tap';
+      aEl.onclick = function () { enterDetail(); openArtist(art); };
+    }
   }
-  if (mi.album && mi.album.item_id) {
-    alEl.className = 'sub album tap';
-    alEl.onclick = function () { enterDetail(); openAlbum(mi.album); };
+  var albumEls = npEls('album');
+  for (var bi = 0; bi < albumEls.length; bi++) {
+    var alEl = albumEls[bi];
+    alEl.className = 'sub album';
+    alEl.onclick = null;
+    if (mi && mi.album && mi.album.item_id) {
+      alEl.className = 'sub album tap';
+      alEl.onclick = function () { enterDetail(); openAlbum(mi.album); };
+    }
   }
 }
 
@@ -2157,23 +2260,25 @@ function tick() {
   if (pos < 0) { pos = 0; }
   if (dur > 0 && pos > dur) { pos = dur; }
   var pct = dur > 0 ? (pos / dur) * 100 : 0;
-  $('dialFill').style.width = pct + '%';
-  $('dialNeedle').style.left = pct + '%';
-  setText($('tPos'), fmt(pos));
-  setText($('tDur'), fmt(dur));
+  var fillEls = npEls('dialFill');
+  for (var fi = 0; fi < fillEls.length; fi++) { fillEls[fi].style.width = pct + '%'; }
+  var needleEls = npEls('dialNeedle');
+  for (var ni = 0; ni < needleEls.length; ni++) { needleEls[ni].style.left = pct + '%'; }
+  npText('tPos', fmt(pos));
+  npText('tDur', fmt(dur));
   updateLyricsHighlight(pos);
 }
 
 /* ==================================================================
-   FAVORITEN
+   FAVORITES
    ==================================================================
-   MA ist hier absichtlich asymmetrisch:
-   - Setzen läuft über die URI (music/favorites/add_item) und legt das
-     Element nebenbei in der Bibliothek an.
-   - Entfernen braucht die Bibliotheks-ID (music/favorites/remove_item),
-     die es nur gibt, wenn das Element in der Bibliothek liegt.
-   Deshalb wird der Zustand immer über music/item_by_uri aufgelöst: das
-   liefert bevorzugt das Bibliothekselement mitsamt favorite-Flag.
+   MA is deliberately asymmetric here:
+   - Setting a favorite goes through the URI (music/favorites/add_item)
+     and creates the item in the library as a side effect.
+   - Removing needs the library id (music/favorites/remove_item), which
+     only exists once the item is actually in the library.
+   The state is therefore always resolved via music/item_by_uri, which
+   preferably returns the library item complete with its favorite flag.
    ================================================================== */
 function resolveItem(uri, cb) {
   if (!uri) { cb(t('internal.noUri'), null); return; }
@@ -2184,10 +2289,10 @@ function isLibraryItem(it) {
   return !!(it && (it.provider === 'library' || it.provider === 'database'));
 }
 
-/* Bibliothekselemente tragen provider === 'library'; music/artists/artist_albums
-   und artist_tracks liefern dafür serverseitig nur die bereits in der Bibliothek
-   verknüpften Einträge (reine DB-Abfrage), nicht die volle Provider-Diskografie.
-   provider_mappings enthält die echten Streaming-Provider-Referenzen. */
+/* Library items carry provider === 'library'; music/artists/artist_albums
+   and artist_tracks then only return the entries already linked in the
+   library (a plain DB query), not the provider's full discography.
+   provider_mappings holds the real streaming-provider references. */
 function resolveProviderRef(it) {
   if (it && isLibraryItem(it) && it.provider_mappings && it.provider_mappings.length) {
     var pm = it.provider_mappings[0];
@@ -2197,6 +2302,84 @@ function resolveProviderRef(it) {
     return { item_id: pm.item_id, provider_instance_id_or_domain: pm.provider_instance };
   }
   return { item_id: it.item_id, provider_instance_id_or_domain: it.provider };
+}
+
+/* ==================================================================
+   MUSIC SOURCE FILTER (Library + Search)
+   ==================================================================
+   Friendlier display names for common provider domains; anything not
+   listed here falls back to a title-cased version of the raw domain. */
+var SOURCE_LABELS = {
+  library: 'Library', filesystem_local: 'Local files', ytmusic: 'YouTube Music',
+  spotify: 'Spotify', tidal: 'Tidal', soundcloud: 'SoundCloud', deezer: 'Deezer',
+  qobuz: 'Qobuz', apple_music: 'Apple Music', radiobrowser: 'Radio Browser'
+};
+function sourceLabel(domain) {
+  if (SOURCE_LABELS[domain]) { return SOURCE_LABELS[domain]; }
+  var words = domain.replace(/_/g, ' ').split(' ');
+  for (var i = 0; i < words.length; i++) {
+    words[i] = words[i].charAt(0).toUpperCase() + words[i].slice(1);
+  }
+  return words.join(' ');
+}
+
+/* Library items carry provider === 'library'; the real streaming source
+   (tidal / ytmusic / soundcloud / ...) only shows up in
+   provider_mappings. Falls back to the item's own provider for search
+   results, which usually already resolve to a real provider domain. */
+function itemProviderDomains(it) {
+  var out = [];
+  if (it && it.provider_mappings && it.provider_mappings.length) {
+    for (var i = 0; i < it.provider_mappings.length; i++) {
+      var d = it.provider_mappings[i].provider_domain;
+      if (d && out.indexOf(d) < 0) { out.push(d); }
+    }
+  }
+  if (!out.length && it && it.provider && it.provider !== 'library') { out.push(it.provider); }
+  return out;
+}
+
+function itemMatchesSource(it, source) {
+  if (source === 'all') { return true; }
+  return itemProviderDomains(it).indexOf(source) >= 0;
+}
+
+function collectSourceDomains(items) {
+  var seen = {}, out = [];
+  for (var i = 0; i < items.length; i++) {
+    var domains = itemProviderDomains(items[i]);
+    for (var j = 0; j < domains.length; j++) {
+      if (!seen[domains[j]]) { seen[domains[j]] = true; out.push(domains[j]); }
+    }
+  }
+  out.sort(function (a, b) { return sourceLabel(a) < sourceLabel(b) ? -1 : 1; });
+  return out;
+}
+
+/* Renders an "All sources" chip plus one chip per provider domain found
+   across `items` into #<boxId>, best-effort since it only ever reflects
+   what provider_mappings/provider actually gave us for the items that
+   happen to be loaded right now. */
+function renderSourceFilters(boxId, items, current, onPick) {
+  var box = $(boxId);
+  if (!box) { return; }
+  var domains = collectSourceDomains(items);
+  box.innerHTML = '';
+  if (!domains.length) { return; }
+  var allEl = document.createElement('div');
+  allEl.className = 'filt' + (current === 'all' ? ' on' : '');
+  allEl.appendChild(document.createTextNode(t('source.all')));
+  allEl.onclick = function () { onPick('all'); };
+  box.appendChild(allEl);
+  for (var i = 0; i < domains.length; i++) {
+    (function (d) {
+      var el = document.createElement('div');
+      el.className = 'filt' + (d === current ? ' on' : '');
+      el.appendChild(document.createTextNode(sourceLabel(d)));
+      el.onclick = function () { onPick(d); };
+      box.appendChild(el);
+    })(domains[i]);
+  }
 }
 
 function toggleFav(it, cb) {
@@ -2212,24 +2395,27 @@ function toggleFav(it, cb) {
 }
 
 function paintNowHeart() {
-  var h = $('npHeart');
-  if (!npUri) { h.className = 'heart hide'; return; }
-  if (npFav === null) { h.className = 'heart busy'; h.innerHTML = '<span>&#9825;</span>'; return; }
-  h.className = 'heart' + (npFav.favorite ? ' on' : '');
-  h.innerHTML = '<span>' + (npFav.favorite ? '&#9829;' : '&#9825;') + '</span>';
+  var els = npEls('npHeart');
+  for (var i = 0; i < els.length; i++) {
+    var h = els[i];
+    if (!npUri) { h.className = 'heart hide'; continue; }
+    if (npFav === null) { h.className = 'heart busy'; h.innerHTML = '<span>&#9825;</span>'; continue; }
+    h.className = 'heart' + (npFav.favorite ? ' on' : '');
+    h.innerHTML = '<span>' + (npFav.favorite ? '&#9829;' : '&#9825;') + '</span>';
+  }
 }
 
 function refreshNowFav() {
   if (!npUri) { paintNowHeart(); return; }
   var want = npUri;
   resolveItem(want, function (err, it) {
-    if (want !== npUri) { return; }     /* Titel hat inzwischen gewechselt */
+    if (want !== npUri) { return; }     /* the track has since changed */
     npFav = err ? null : it;
     paintNowHeart();
   });
 }
 
-$('npHeart').onclick = function () {
+npOn('npHeart', 'onclick', function () {
   if (!npFav) { return; }
   var was = !!npFav.favorite;
   toggleFav(npFav, function (err) {
@@ -2237,21 +2423,21 @@ $('npHeart').onclick = function () {
     toast(was ? t('fav.removed') : t('fav.added'));
     setTimeout(refreshNowFav, 600);
   });
-};
+});
 
-$('npAdd').onclick = function () {
+npOn('npAdd', 'onclick', function () {
   if (!npUri) { return; }
   openPlaylistSheet(npUri, $('title').textContent || t('now.currentTrackFallback'));
-};
+});
 
 /* ==================================================================
-   SONGTEXTE
+   LYRICS
    ==================================================================
-   metadata.lyrics (Klartext) und metadata.lrc_lyrics (LRC-Format mit
-   Zeitstempeln pro Zeile) kommen wie bei den Favoriten ausschließlich
-   über music/item_by_uri, nie aus dem (ggf. veralteten) Queue-Item -
-   der Server liefert Lyrics oft erst verzögert nach. Gleiches
-   Race-Guard-Muster wie refreshNowFav().
+   metadata.lyrics (plain text) and metadata.lrc_lyrics (LRC format with
+   a timestamp per line) come, just like favorites, exclusively through
+   music/item_by_uri, never from the (possibly stale) queue item - the
+   server often only delivers lyrics with a delay. Same race-guard
+   pattern as refreshNowFav().
    ================================================================== */
 function parseLrc(raw) {
   if (!raw) { return null; }
@@ -2263,12 +2449,12 @@ function parseLrc(raw) {
     var lastEnd = 0, matched = false, m, times = [];
     tagRe.lastIndex = 0;
     while ((m = tagRe.exec(line)) !== null) {
-      if (m.index !== lastEnd) { break; } /* Zeit-Tags müssen lückenlos am Zeilenanfang stehen */
+      if (m.index !== lastEnd) { break; } /* time tags must sit back-to-back at the start of the line */
       matched = true;
       times.push(parseInt(m[1], 10) * 60 + parseFloat(m[2] + (m[3] ? '.' + m[3] : '')));
       lastEnd = tagRe.lastIndex;
     }
-    if (!matched) { continue; } /* z.B. LRC-Kopfzeilen wie [ar:...]/[ti:...] */
+    if (!matched) { continue; } /* e.g. LRC header lines like [ar:...]/[ti:...] */
     var text = line.slice(lastEnd).replace(/^\s+/, '');
     for (var j = 0; j < times.length; j++) { out.push({ time: times[j], text: text }); }
   }
@@ -2277,35 +2463,36 @@ function parseLrc(raw) {
   return out;
 }
 
-/* metadata/get_track_lyrics ist ein synchroner On-Demand-Befehl (kein Scheduling/
-   Event-Umweg wie bei music/item_by_uri mit allow_update_metadata): der Server prueft
-   zuerst das mitgegebene Track-Objekt, holt bei Bibliothekstiteln sonst sofort per
-   Metadaten-Update nach bzw. befragt bei Fremd-Providern direkt die Lyrics-Provider
-   (LRCLIB/Genius/...) - das nutzt auch die offizielle MA-Weboberflaeche. Liefert
-   [lyrics, lrc_lyrics], beides moeglicherweise null. */
+/* metadata/get_track_lyrics is a synchronous on-demand command (no
+   scheduling/event detour like music/item_by_uri with
+   allow_update_metadata): the server first checks the given track
+   object, then for library tracks immediately fetches a metadata
+   update, or for other providers queries the lyrics metadata providers
+   (LRCLIB/Genius/...) directly - the official MA web UI uses the same
+   command. Returns [lyrics, lrc_lyrics], either possibly null. */
 function refreshNowLyrics() {
   if (!npUri || !npTrack) {
     npLyricsForUri = npUri;
     npLyricsLoaded = true;
     npLyricsPlain = null;
     npLyricsLrc = null;
-    if (currentTab === 'lyrics') { renderLyricsView(); }
+    if (currentTab === 'now' && nowLyricsOpen) { renderLyricsView(); }
     return;
   }
-  if (npLyricsForUri === npUri) { return; }     /* schon geladen oder Anfrage laeuft bereits */
+  if (npLyricsForUri === npUri) { return; }     /* already loaded, or the request is already in flight */
   npLyricsForUri = npUri;
   npLyricsLoaded = false;
   npLyricsPlain = null;
   npLyricsLrc = null;
   lyricsActiveLineIdx = -1;
-  if (currentTab === 'lyrics') { renderLyricsView(); }
+  if (currentTab === 'now' && nowLyricsOpen) { renderLyricsView(); }
   var want = npUri;
   send('metadata/get_track_lyrics', { track: npTrack }, function (err, result) {
-    if (want !== npUri) { return; }     /* Titel hat inzwischen gewechselt */
+    if (want !== npUri) { return; }     /* the track has since changed */
     npLyricsLoaded = true;
     npLyricsPlain = (!err && result && result[0]) || null;
     npLyricsLrc = parseLrc((!err && result && result[1]) || null);
-    if (currentTab === 'lyrics') { renderLyricsView(); }
+    if (currentTab === 'now' && nowLyricsOpen) { renderLyricsView(); }
   });
 }
 
@@ -2318,7 +2505,7 @@ function renderHint(box, text) {
 }
 
 function renderLyricsView() {
-  var box = $('lyricsBox');
+  var box = $('lyricsBoxBig');
   lyricsLineEls = null;
   lyricsActiveLineIdx = -1;
   if (!npUri) { renderHint(box, t('lyrics.noTrack')); return; }
@@ -2329,11 +2516,11 @@ function renderLyricsView() {
     for (var i = 0; i < npLyricsLrc.length; i++) {
       var lineEl = document.createElement('div');
       lineEl.className = 'lyric-line';
-      setText(lineEl, npLyricsLrc[i].text || ' ');
+      setText(lineEl, npLyricsLrc[i].text || ' ');
       box.appendChild(lineEl);
       lyricsLineEls.push(lineEl);
     }
-    tick(); /* stößt updateLyricsHighlight() mit der aktuell interpolierten Position an */
+    tick(); /* kicks updateLyricsHighlight() off with the currently interpolated position */
     return;
   }
   if (npLyricsPlain) {
@@ -2348,7 +2535,7 @@ function renderLyricsView() {
 }
 
 function updateLyricsHighlight(pos) {
-  if (currentTab !== 'lyrics' || !npLyricsLrc || !lyricsLineEls) { return; }
+  if (!(currentTab === 'now' && nowLyricsOpen) || !npLyricsLrc || !lyricsLineEls) { return; }
   var idx = -1;
   for (var i = 0; i < npLyricsLrc.length; i++) {
     if (npLyricsLrc[i].time <= pos) { idx = i; } else { break; }
@@ -2361,7 +2548,7 @@ function updateLyricsHighlight(pos) {
   if (idx >= 0 && lyricsLineEls[idx]) {
     var el = lyricsLineEls[idx];
     addClass(el, 'now');
-    var box = $('lyricsBox');
+    var box = $('lyricsBoxBig');
     var target = el.offsetTop - (box.clientHeight / 2) + (el.offsetHeight / 2);
     var maxScroll = box.scrollHeight - box.clientHeight;
     if (target < 0) { target = 0; }
@@ -2371,25 +2558,48 @@ function updateLyricsHighlight(pos) {
 }
 
 function paintLyricsButton() {
-  var b = $('npLyrics');
-  if (!npUri) { b.className = 'heart hide'; return; }
-  b.className = 'heart' + (currentTab === 'lyrics' ? ' on' : '');
+  var on = (currentTab === 'now' && nowLyricsOpen);
+  var els = npEls('npLyrics');
+  for (var i = 0; i < els.length; i++) {
+    if (!npUri) { els[i].className = 'heart hide'; continue; }
+    els[i].className = 'heart' + (on ? ' on' : '');
+  }
 }
 
+/* Lyrics no longer live in their own tab - they're a view inside the
+   full-screen Now Playing page, toggled by nowLyricsOpen. Tapping the
+   lyrics button from the compact controls (Library/Search) jumps to the
+   Now Playing page and opens the lyrics view in one step. */
 function toggleLyricsView() {
-  if (currentTab === 'lyrics') {
-    switchTab(lyricsPrevTab || 'queue');
+  if (currentTab === 'now' && nowLyricsOpen) {
+    nowLyricsOpen = false;
+    removeClass($('pageNow'), 'lyrics-open');
+    paintLyricsButton();
   } else {
-    lyricsPrevTab = currentTab;
-    switchTab('lyrics');
+    nowLyricsOpen = true;
+    switchTab('now');
+  }
+}
+
+npOn('npLyrics', 'onclick', toggleLyricsView);
+
+/* Runs every time the Now Playing tab becomes active (TABS.now.init) -
+   syncs the lyrics-open CSS class and (re)loads lyrics data if the
+   lyrics view is the one currently meant to be showing. */
+function syncNowPageState() {
+  var page = $('pageNow');
+  if (nowLyricsOpen) {
+    addClass(page, 'lyrics-open');
+    refreshNowLyrics();
+    renderLyricsView();
+  } else {
+    removeClass(page, 'lyrics-open');
   }
   paintLyricsButton();
 }
 
-$('npLyrics').onclick = toggleLyricsView;
-
 /* ==================================================================
-   ZU PLAYLIST HINZUFÜGEN
+   ADD TO PLAYLIST
    ================================================================== */
 var userPlaylists = [];
 var playlistSheetTarget = null;
@@ -2517,17 +2727,17 @@ $('playlistSheetbg').onclick = function (e) {
 /* ==================================================================
    AUTOMIX / SMART CROSSFADE
    ==================================================================
-   Ab MA-Server 2.10.0 (music-assistant/server#4373) ist Crossfade eine
-   Queue-Einstellung (players_queues/crossfade, Feld crossfade_enabled
-   auf dem PlayerQueue-Objekt) statt einer Player-Config
-   (config/players/*, smart_fades_mode). Kein Fallback für ältere
-   Server. Während laufender Wiedergabe muss zum Aktivieren kurz
-   pausiert werden, damit der Audio-Stream den neuen Modus greift.
+   Since MA server 2.10.0 (music-assistant/server#4373), crossfade is a
+   queue setting (players_queues/crossfade, the crossfade_enabled field
+   on the PlayerQueue object) instead of a player config
+   (config/players/*, smart_fades_mode). No fallback for older servers.
+   During active playback, it has to be paused briefly to enable it so
+   the audio stream picks up the new mode.
    ================================================================== */
 var crossfadeEnabled = false;
 
 function paintAutomix() {
-  $('bAutomix').className = 'tgl' + (crossfadeEnabled ? ' on' : '');
+  npClass('bAutomix', 'tgl' + (crossfadeEnabled ? ' on' : ''));
 }
 
 function loadCrossfadeState() {
@@ -2570,14 +2780,14 @@ function toggleAutomix() {
   }
 }
 
-$('bAutomix').onclick = toggleAutomix;
+npOn('bAutomix', 'onclick', toggleAutomix);
 
 /* ==================================================================
    TRANSPORT
    ==================================================================
-   players/cmd/* statt player_queues/*: die Player-Kommandos greifen auch
-   dann, wenn gerade eine fremde Quelle läuft (AirPlay, Spotify Connect),
-   und leiten intern an die Queue weiter, wenn eine aktiv ist.
+   players/cmd/* instead of player_queues/*: the player commands still
+   work even while a foreign source is playing (AirPlay, Spotify
+   Connect), and forward internally to the queue when one is active.
    ================================================================== */
 function cmd(command, args, after) {
   send(command, args, function (err) {
@@ -2586,68 +2796,80 @@ function cmd(command, args, after) {
   });
 }
 
-$('bPlay').onclick = function () {
+npOn('bPlay', 'onclick', function () {
   if (!activeId) { return; }
-  /* Sofort umschalten, damit der Knopf nicht auf das Ereignis wartet. */
+  /* Flip immediately, so the button doesn't wait on the event round-trip. */
   isPlaying = !isPlaying;
-  anchorPos = anchorPos + (isPlaying ? 0 : 0);
-  $('bPlay').innerHTML = svgIcon(isPlaying ? 'pause' : 'play');
+  npHtml('bPlay', svgIcon(isPlaying ? 'pause' : 'play'));
   cmd('players/cmd/play_pause', { player_id: activeId });
-};
-$('bNext').onclick = function () {
+});
+npOn('bNext', 'onclick', function () {
   if (activeId) { cmd('players/cmd/next', { player_id: activeId }); }
-};
-$('bPrev').onclick = function () {
+});
+npOn('bPrev', 'onclick', function () {
   if (activeId) { cmd('players/cmd/previous', { player_id: activeId }); }
-};
-$('bShuffle').onclick = function () {
+});
+npOn('bShuffle', 'onclick', function () {
   var q = activeQueue();
   if (!q) { return; }
   cmd('player_queues/shuffle', { queue_id: q.queue_id, shuffle_enabled: !q.shuffle_enabled });
-};
-$('bRepeat').onclick = function () {
+});
+npOn('bRepeat', 'onclick', function () {
   var q = activeQueue();
   if (!q) { return; }
   var cur = q.repeat_mode || 'off';
   var next = cur === 'off' ? 'all' : (cur === 'all' ? 'one' : 'off');
   cmd('player_queues/repeat', { queue_id: q.queue_id, repeat_mode: next });
-};
+});
 
-/* Tippen auf die Skala springt an die Stelle. */
-$('dialTrack').onclick = function (e) {
-  if (!activeId || !curDur) { return; }
-  var el = $('dialTrack');
-  var left = 0, n = el;
-  while (n) { left += n.offsetLeft; n = n.offsetParent; }
-  var x = (e.pageX !== undefined ? e.pageX : e.clientX) - left;
-  var pct = Math.max(0, Math.min(1, x / el.offsetWidth));
-  var target = Math.floor(curDur * pct);
-  anchorPos = target;
-  anchorAt = serverNow();
-  tick();
-  cmd('players/cmd/seek', { player_id: activeId, position: target });
-};
+/* Tapping the scale jumps to that position. */
+(function () {
+  var dialEls = npEls('dialTrack');
+  for (var i = 0; i < dialEls.length; i++) {
+    (function (el) {
+      el.onclick = function (e) {
+        if (!activeId || !curDur) { return; }
+        var left = 0, n = el;
+        while (n) { left += n.offsetLeft; n = n.offsetParent; }
+        var x = (e.pageX !== undefined ? e.pageX : e.clientX) - left;
+        var pct = Math.max(0, Math.min(1, x / el.offsetWidth));
+        var target = Math.floor(curDur * pct);
+        anchorPos = target;
+        anchorAt = serverNow();
+        tick();
+        cmd('players/cmd/seek', { player_id: activeId, position: target });
+      };
+    })(dialEls[i]);
+  }
+})();
 
-$('vol').addEventListener('touchstart', function () { volDragging = true; }, false);
-$('vol').addEventListener('mousedown', function () { volDragging = true; }, false);
-$('vol').addEventListener('input', function () { setText($('volVal'), $('vol').value); }, false);
-$('vol').addEventListener('change', function () {
-  volDragging = false;
-  if (!activeId) { return; }
-  var p = activePlayer() || {};
-  var lvl = parseInt($('vol').value, 10);
-  /* Gruppenplayer melden volume_level: null - dort zählt group_volume. */
-  var useGroup = (p.volume_level === null || p.volume_level === undefined);
-  cmd(useGroup ? 'players/cmd/group_volume' : 'players/cmd/volume_set',
-      { player_id: activeId, volume_level: lvl });
-}, false);
+(function () {
+  var volEls = npEls('vol');
+  for (var i = 0; i < volEls.length; i++) {
+    (function (slider) {
+      slider.addEventListener('touchstart', function () { volDragging = true; }, false);
+      slider.addEventListener('mousedown', function () { volDragging = true; }, false);
+      slider.addEventListener('input', function () { npText('volVal', slider.value); }, false);
+      slider.addEventListener('change', function () {
+        volDragging = false;
+        if (!activeId) { return; }
+        var p = activePlayer() || {};
+        var lvl = parseInt(slider.value, 10);
+        /* Group players report volume_level: null - group_volume is what counts there. */
+        var useGroup = (p.volume_level === null || p.volume_level === undefined);
+        cmd(useGroup ? 'players/cmd/group_volume' : 'players/cmd/volume_set',
+            { player_id: activeId, volume_level: lvl });
+      }, false);
+    })(volEls[i]);
+  }
+})();
 
-$('bPrev').innerHTML = svgIcon('prev');
-$('bNext').innerHTML = svgIcon('next');
-$('bPlay').innerHTML = svgIcon('play');
+npHtml('bPrev', svgIcon('prev'));
+npHtml('bNext', svgIcon('next'));
+npHtml('bPlay', svgIcon('play'));
 
 /* ==================================================================
-   LISTEN-BAUSTEINE
+   LIST BUILDING BLOCKS
    ================================================================== */
 var NAVIGABLE = { artist: 1, album: 1, playlist: 1, podcast: 1, audiobook: 1 };
 
@@ -2718,8 +2940,8 @@ function mediaRow(it, type, opts) {
   };
   row.appendChild(main);
 
-  /* Immer erreichbar: das Aktionsblatt. Bei blätterbaren Einträgen ist
-     das der einzige Weg dorthin, weil das Antippen navigiert. */
+  /* Always reachable: the action sheet. For browsable entries this is
+     the only way to get there, since tapping navigates instead. */
   var more = document.createElement('div');
   more.className = 'more';
   more.innerHTML = '&#8942;';
@@ -2733,11 +2955,10 @@ function mediaRow(it, type, opts) {
 }
 
 /* ==================================================================
-   NAVIGATIONS-STAPEL
+   NAVIGATION STACK
    ==================================================================
-   Ein Stapel von Ansichten: Suche > Interpret > Album. Der oberste
-   Eintrag bestimmt Kopfzeile und Liste; "Zurück" nimmt einen herunter.
-   ================================================================== */
+   A stack of views: Search > Artist > Album. The top entry determines
+   the header and the list; "Back" pops one off. */
 var stack = [];
 var artistSortMode = 'name';
 
@@ -2814,7 +3035,7 @@ function renderStack() {
   setText($('crumbName'), top.title || '');
   setText($('crumbSub'), top.sub || '');
 
-  /* Kopf-Aktionen der Detailansicht: abspielen + Favorit */
+  /* Detail-view header actions: play + favorite */
   var pa = $('crumbPlay');
   pa.style.display = top.item ? 'block' : 'none';
   pa.onclick = function () { if (top.item) { openSheet(top.item, top.item.media_type, {}); } };
@@ -2832,7 +3053,7 @@ function renderStack() {
     });
   };
 
-  /* Tabs mit Lazy Loading: bereits geladene Inhalte aus dem Cache nehmen. */
+  /* Tabs with lazy loading: take already-loaded content from the cache. */
   var cacheKey = null;
   var activeTab = null;
   if (top.tabs && top.tabs.length) {
@@ -2847,7 +3068,7 @@ function renderStack() {
   box.innerHTML = '<div class="hint">' + t('common.loading') + '</div>';
   var loader = getActiveLoader(top);
   loader.call(top, function (err, sections) {
-    if (stack[stack.length - 1] !== top) { return; }   /* zwischenzeitlich weitergeblättert */
+    if (stack[stack.length - 1] !== top) { return; }   /* navigated further in the meantime */
     if (err) {
       box.innerHTML = '';
       var h = document.createElement('div');
@@ -2910,7 +3131,7 @@ function renderSections(sections) {
 
 $('bBack').onclick = popView;
 
-/* ---------- Detailansichten ---------- */
+/* ---------- Detail views ---------- */
 function openItem(it, mt) {
   mt = mt || it.media_type;
   enterDetail();
@@ -3070,7 +3291,7 @@ function sortMediaItems(items, mode) {
 }
 
 /* ==================================================================
-   SUCHE
+   SEARCH
    ================================================================== */
 var FILTERS = [
   { k: 'all',      lKey: 'filter.all' },
@@ -3097,6 +3318,7 @@ var SEARCH_SORTS = [
   { k: 'year',      lKey: 'sort.year' }
 ];
 var searchSortMode = 'relevance';
+var searchSourceFilter = 'all';
 
 function buildFilters() {
   var box = $('filters');
@@ -3154,15 +3376,29 @@ function renderResults(res) {
   var box = $('results');
   if (!res) {
     box.innerHTML = '<div class="hint">' + t('search.hint') + '</div>';
+    $('sourceFilters').innerHTML = '';
     return;
   }
+  var allItems = [];
   var sections = [];
   for (var g = 0; g < GROUPS.length; g++) {
     var grp = GROUPS[g];
     var secItems = (res[grp.key] || []).slice();
+    for (var k = 0; k < secItems.length; k++) { allItems.push(secItems[k]); }
     if (searchSortMode !== 'relevance') { sortMediaItems(secItems, searchSortMode); }
+    if (searchSourceFilter !== 'all') {
+      var filtered = [];
+      for (var f = 0; f < secItems.length; f++) {
+        if (itemMatchesSource(secItems[f], searchSourceFilter)) { filtered.push(secItems[f]); }
+      }
+      secItems = filtered;
+    }
     sections.push({ label: t(grp.lKey), type: grp.type, items: secItems });
   }
+  renderSourceFilters('sourceFilters', allItems, searchSourceFilter, function (d) {
+    searchSourceFilter = d;
+    renderResults(lastResults);
+  });
   renderSections(sections);
   var any = false;
   for (var i = 0; i < sections.length; i++) { if (sections[i].items.length) { any = true; } }
@@ -3175,7 +3411,7 @@ $('bSearch').onclick = doSearch;
 $('q').onkeypress = function (e) { if ((e.keyCode || e.which) === 13) { $('q').blur(); doSearch(); } };
 
 /* ==================================================================
-   AKTIONSBLATT
+   ACTION SHEET
    ================================================================== */
 var pending2 = null;   /* { item, type, opts, resolved } */
 
@@ -3189,7 +3425,7 @@ function openSheet(it, type, opts) {
     setText($('sheetSub'), t('sheet.subtitlePlayerOnly', { player: playerName(activeId) }));
   }
 
-  /* "Öffnen" nur, wenn es eine Detailansicht gibt und wir nicht schon drin sind */
+  /* "Open" only when there's a detail view and we're not already in it */
   var mt = pending2.type;
   var top = stack.length ? stack[stack.length - 1] : null;
   var alreadyOpen = top && top.item && top.item.uri === it.uri;
@@ -3223,8 +3459,8 @@ function playPending(option) {
   if (!activeQueueId) { toast(t('common.noPlayerSelected'), true); return; }
   var it = pending2.item;
   var args = { queue_id: activeQueueId, media: it.uri, option: option };
-  /* Aus einer Album-/Playlist-Ansicht heraus soll ein Titel nicht allein
-     laufen, sondern die ganze Liste ab diesem Titel. */
+  /* From an album/playlist view, a track shouldn't play on its own -
+     the whole list should play starting from this track. */
   var from = pending2.opts.startFrom;
   if (from && option === 'replace') {
     args.media = from.uri;
@@ -3281,7 +3517,12 @@ $('aCancel').onclick = closeSheet;
 $('sheetbg').onclick = function (e) { if (e.target === $('sheetbg')) { closeSheet(); } };
 
 /* ==================================================================
-   BIBLIOTHEK
+   LIBRARY
+   ==================================================================
+   The Queue (currentLibType === 'queue') is folded in here as one more
+   chip instead of its own footer icon - see loadLibrary() below, which
+   delegates to the existing loadQueue()/renderQueueRows() machinery
+   from the QUEUE section further down for that case.
    ================================================================== */
 var LIB_TYPES = [
   { k: 'playlist',  lKey: 'media.playlists',   cmd: 'music/playlists/library_items',  type: 'playlist' },
@@ -3294,6 +3535,7 @@ var LIB_TYPES = [
 ];
 var currentLibType = 'playlist';
 var libFavOnly = false;
+var librarySourceFilter = 'all';
 var SORT_MODES = [
   { k: 'name', lKey: 'sort.name' },
   { k: 'year', lKey: 'sort.year' }
@@ -3303,19 +3545,22 @@ var libSortMode = 'name';
 function buildLibFilters() {
   var box = $('libFilters');
   box.innerHTML = '';
+  var inQueueMode = (currentLibType === 'queue');
 
-  /* Favoriten-Filter als erster Chip */
-  (function () {
-    var el = document.createElement('div');
-    el.className = 'filt fav' + (libFavOnly ? ' on' : '');
-    setText(el, t('lib.favOnly'));
-    el.onclick = function () {
-      libFavOnly = !libFavOnly;
-      buildLibFilters();
-      loadLibrary(currentLibType);
-    };
-    box.appendChild(el);
-  })();
+  /* Favorites-only chip first - doesn't apply to the Queue */
+  if (!inQueueMode) {
+    (function () {
+      var el = document.createElement('div');
+      el.className = 'filt fav' + (libFavOnly ? ' on' : '');
+      setText(el, t('lib.favOnly'));
+      el.onclick = function () {
+        libFavOnly = !libFavOnly;
+        buildLibFilters();
+        loadLibrary(currentLibType);
+      };
+      box.appendChild(el);
+    })();
+  }
 
   for (var i = 0; i < LIB_TYPES.length; i++) {
     (function (def) {
@@ -3331,28 +3576,60 @@ function buildLibFilters() {
     })(LIB_TYPES[i]);
   }
 
-  for (var j = 0; j < SORT_MODES.length; j++) {
-    (function (s) {
-      var el = document.createElement('div');
-      el.className = 'filt' + (s.k === libSortMode ? ' on' : '');
-      el.appendChild(document.createTextNode(t(s.lKey)));
-      el.onclick = function () {
-        libSortMode = s.k;
-        buildLibFilters();
-        loadLibrary(currentLibType);
-      };
-      box.appendChild(el);
-    })(SORT_MODES[j]);
+  /* Queue chip - not a music library media type, see loadLibrary() below */
+  (function () {
+    var el = document.createElement('div');
+    el.className = 'filt' + (inQueueMode ? ' on' : '');
+    el.appendChild(document.createTextNode(t('lib.queue')));
+    el.onclick = function () {
+      currentLibType = 'queue';
+      buildLibFilters();
+      loadLibrary('queue');
+    };
+    box.appendChild(el);
+  })();
+
+  if (!inQueueMode) {
+    for (var j = 0; j < SORT_MODES.length; j++) {
+      (function (s) {
+        var el = document.createElement('div');
+        el.className = 'filt' + (s.k === libSortMode ? ' on' : '');
+        el.appendChild(document.createTextNode(t(s.lKey)));
+        el.onclick = function () {
+          libSortMode = s.k;
+          buildLibFilters();
+          loadLibrary(currentLibType);
+        };
+        box.appendChild(el);
+      })(SORT_MODES[j]);
+    }
   }
 }
 
 function loadLibrary(typeKey) {
+  var listBox = $('libResults');
+  var queueBox = $('queue');
+  var toolbar = $('queueToolbar');
+
+  if (typeKey === 'queue') {
+    listBox.style.display = 'none';
+    queueBox.style.display = '';
+    toolbar.style.display = '-webkit-flex';
+    toolbar.style.display = 'flex';
+    $('libSourceFilters').innerHTML = '';
+    loadQueue();
+    return;
+  }
+  listBox.style.display = '';
+  queueBox.style.display = 'none';
+  toolbar.style.display = 'none';
+
   var def = null;
   for (var i = 0; i < LIB_TYPES.length; i++) {
     if (LIB_TYPES[i].k === typeKey) { def = LIB_TYPES[i]; break; }
   }
   if (!def) { return; }
-  var box = $('libResults');
+  var box = listBox;
   box.innerHTML = '<div class="hint">' + t('common.loading') + '</div>';
   var want = typeKey;
   send(def.cmd, { limit: CFG.LIST_LIMIT, offset: 0, order_by: 'name' }, function (err, items) {
@@ -3372,6 +3649,17 @@ function loadLibrary(typeKey) {
       items = filtered;
     }
     sortMediaItems(items, libSortMode);
+    renderSourceFilters('libSourceFilters', items, librarySourceFilter, function (d) {
+      librarySourceFilter = d;
+      loadLibrary(currentLibType);
+    });
+    if (librarySourceFilter !== 'all') {
+      var srcFiltered = [];
+      for (var s = 0; s < items.length; s++) {
+        if (itemMatchesSource(items[s], librarySourceFilter)) { srcFiltered.push(items[s]); }
+      }
+      items = srcFiltered;
+    }
     if (!items || !items.length) {
       box.innerHTML = '<div class="hint">' + (libFavOnly ? t('lib.noFavorites') : t('lib.noEntries')) + '</div>';
       return;
@@ -3383,22 +3671,122 @@ function loadLibrary(typeKey) {
 }
 
 /* ==================================================================
-   WARTESCHLANGE
+   RADIO (favorite stations grid, grouped by country)
    ================================================================== */
-var currentTab = 'queue';
-/* Merkt sich, aus welchem Tab eine Detailansicht (Interpret/Album/...) geöffnet
-   wurde, damit switchTab() den ursprünglichen Reiter optisch aktiv halten und
-   popView() beim vollständigen Verlassen der Detailansicht dorthin zurückkehren
-   kann - die Detailansicht selbst lebt technisch immer in #paneSearch. */
+
+/* Best-effort: not every radio provider supplies a country field (MA
+   doesn't guarantee one), so this simply returns null when there's
+   nothing usable and loadRadioGrid() buckets those into one trailing
+   "Other" group rather than losing the grouping feature entirely. */
+function radioCountry(it) {
+  var c = (it.metadata && it.metadata.country) || it.country || null;
+  return c ? String(c) : null;
+}
+
+function loadRadioGrid() {
+  var box = $('radioGrid');
+  box.innerHTML = '<div class="hint">' + t('common.loading') + '</div>';
+  send('music/radios/library_items', { limit: CFG.LIST_LIMIT, offset: 0, order_by: 'name' }, function (err, items) {
+    if (err) {
+      box.innerHTML = '';
+      var h = document.createElement('div');
+      h.className = 'hint';
+      setText(h, t('common.loadError', { err: err }));
+      box.appendChild(h);
+      return;
+    }
+    var favs = [];
+    for (var i = 0; i < items.length; i++) { if (items[i].favorite) { favs.push(items[i]); } }
+    if (!favs.length) {
+      box.innerHTML = '<div class="hint">' + t('radio.empty') + '</div>';
+      return;
+    }
+
+    var otherLabel = t('radio.otherGroup');
+    var groups = {};
+    var order = [];
+    for (var j = 0; j < favs.length; j++) {
+      var country = radioCountry(favs[j]) || otherLabel;
+      if (!groups[country]) { groups[country] = []; order.push(country); }
+      groups[country].push(favs[j]);
+    }
+    order.sort(function (a, b) {
+      if (a === otherLabel) { return 1; }
+      if (b === otherLabel) { return -1; }
+      return a.toLowerCase() < b.toLowerCase() ? -1 : 1;
+    });
+
+    box.innerHTML = '';
+    for (var g = 0; g < order.length; g++) {
+      var stations = groups[order[g]];
+      stations.sort(function (a, b) {
+        var an = (a.name || '').toLowerCase(), bn = (b.name || '').toLowerCase();
+        return an < bn ? -1 : (an > bn ? 1 : 0);
+      });
+      var head = document.createElement('div');
+      head.className = 'group';
+      setText(head, order[g]);
+      box.appendChild(head);
+      var grid = document.createElement('div');
+      grid.className = 'radio-grid';
+      for (var s = 0; s < stations.length; s++) { grid.appendChild(radioTile(stations[s])); }
+      box.appendChild(grid);
+    }
+  });
+}
+
+function radioTile(it) {
+  var tile = document.createElement('div');
+  tile.className = 'radio-tile';
+  var pic = imgUrl(it, CFG.IMG_THUMB);
+  if (pic) {
+    tile.style.backgroundImage = 'url(' + pic + ')';
+    var shade = document.createElement('div');
+    shade.className = 'rt-shade';
+    tile.appendChild(shade);
+  } else {
+    var ph = document.createElement('div');
+    ph.className = 'rt-ph';
+    ph.innerHTML = '&#9835;';
+    tile.appendChild(ph);
+  }
+  var name = document.createElement('div');
+  name.className = 'rt-name';
+  setText(name, it.name || '—');
+  tile.appendChild(name);
+  tile.onclick = function () { playRadioStation(it); };
+  return tile;
+}
+
+function playRadioStation(it) {
+  if (!activeQueueId) { toast(t('common.noPlayerSelected'), true); return; }
+  send('player_queues/play_media', { queue_id: activeQueueId, media: it.uri, option: 'replace' }, function (err) {
+    if (err) { toast(t('toast.playFailed', { err: err }), true); return; }
+    switchTab('now');
+  });
+}
+
+/* ==================================================================
+   PAGE ROUTER (footer navigation)
+   ================================================================== */
+var currentTab = 'now';
+/* Remembers which tab a detail view (artist/album/...) was opened from,
+   so switchTab() can keep the original pill visually active and
+   popView() can return there once the detail view is fully closed - the
+   detail view itself technically always lives in #paneSearch, inside
+   the shared #pageLibSearch page. */
 var navOriginTab = null;
 
 var TABS = {
-  search:  { pane: 'paneSearch',  init: null },
-  queue:   { pane: 'paneQueue',   init: loadQueue },
-  library: { pane: 'paneLibrary', init: function () { buildLibFilters(); loadLibrary(currentLibType); } },
-  lyrics:  { pane: 'paneLyrics',  init: function () { refreshNowLyrics(); renderLyricsView(); } }
+  now:     { pane: 'pageNow',       init: syncNowPageState },
+  radio:   { pane: 'pageRadio',     init: loadRadioGrid },
+  library: { pane: 'pageLibSearch', init: function () { showLibSearchSide('library'); buildLibFilters(); loadLibrary(currentLibType); } },
+  search:  { pane: 'pageLibSearch', init: function () { showLibSearchSide('search'); } }
 };
 
+/* library and search share the #pageLibSearch pane (see showLibSearchSide()
+   below), so visibility is computed once per unique pane id rather than
+   letting whichever TABS key is processed last in the loop always win. */
 function switchTab(name, pillName) {
   currentTab = name;
   var active = pillName || name;
@@ -3406,13 +3794,31 @@ function switchTab(name, pillName) {
   for (var i = 0; i < tabs.length; i++) {
     tabs[i].className = 'tab' + (tabs[i].getAttribute('data-tab') === active ? ' on' : '');
   }
+  var visible = {};
   for (var k in TABS) {
     if (!TABS.hasOwnProperty(k)) { continue; }
-    var pane = $(TABS[k].pane);
-    pane.style.display = (k === name) ? '-webkit-flex' : 'none';
-    pane.style.display = (k === name) ? 'flex' : 'none';
+    var paneId = TABS[k].pane;
+    visible[paneId] = visible[paneId] || (k === name);
+  }
+  for (var paneId2 in visible) {
+    if (!visible.hasOwnProperty(paneId2)) { continue; }
+    var pane = $(paneId2);
+    pane.style.display = visible[paneId2] ? '-webkit-flex' : 'none';
+    pane.style.display = visible[paneId2] ? 'flex' : 'none';
   }
   if (TABS[name] && TABS[name].init) { TABS[name].init(); }
+}
+
+/* Toggles which right-hand pane is shown inside the shared #pageLibSearch
+   two-column shell - the compact playback controls in .left stay put
+   either way. */
+function showLibSearchSide(which) {
+  var searchPane = $('paneSearch');
+  var libPane = $('paneLibrary');
+  searchPane.style.display = (which === 'search') ? '-webkit-flex' : 'none';
+  searchPane.style.display = (which === 'search') ? 'flex' : 'none';
+  libPane.style.display = (which === 'library') ? '-webkit-flex' : 'none';
+  libPane.style.display = (which === 'library') ? 'flex' : 'none';
 }
 
 function enterDetail() {
@@ -3427,11 +3833,22 @@ function enterDetail() {
   }
 })();
 
+$('footNow').innerHTML = svgIcon('now');
+$('footRadio').innerHTML = svgIcon('radio');
+$('footLibrary').innerHTML = svgIcon('library');
+$('footSearch').innerHTML = svgIcon('search');
+
+/* ==================================================================
+   QUEUE
+   ==================================================================
+   Reached as a chip inside the Library page (currentLibType === 'queue'),
+   not as its own footer icon - see loadLibrary() above.
+   ================================================================== */
 var QUEUE_HISTORY_LIMIT = 3;
 
-/* Merkt sich die zuletzt gerenderte Queue, damit ein reiner Titelwechsel
-   (identische Reihenfolge, nur Verschiebung des aktuellen Titels) als
-   Slide-Animation statt als Komplett-Neuaufbau dargestellt werden kann. */
+/* Remembers the last rendered queue, so a plain track change (identical
+   order, only the current track shifting) can be shown as a slide
+   animation instead of a full rebuild. */
 var lastQueueIds = null;
 var lastQueueStartIdx = -1;
 
@@ -3477,7 +3894,7 @@ function loadQueue() {
   });
 }
 
-/* Kompletter Neuaufbau der Queue-Liste (Banner + Zeilen ab startIdx). */
+/* Full rebuild of the queue list (banner + rows starting from startIdx). */
 function renderQueueRows(box, q, items, startIdx, curId) {
   box.innerHTML = '';
   if (q && q.radio_mode) {
@@ -3504,12 +3921,12 @@ function renderQueueRows(box, q, items, startIdx, curId) {
   }
 }
 
-/* Versucht, einen reinen Titelwechsel als Slide-Animation abzubilden:
-   Voraussetzung ist, dass Anzahl und Reihenfolge der Queue-Items seit dem
-   letzten Rendern unverändert sind (kein Hinzufügen/Löschen/Umsortieren) -
-   dann verschiebt sich nur das sichtbare Fenster nach vorn. Die dabei oben
-   herausfallenden Zeilen werden weggeslided statt hart entfernt zu werden.
-   Gibt true zurück, wenn die Animation angewendet wurde. */
+/* Tries to represent a plain track change as a slide animation: this
+   requires the number and order of queue items to be unchanged since
+   the last render (no adding/removing/reordering) - in that case only
+   the visible window shifts forward. The rows that fall out the top get
+   slid away instead of being removed outright.
+   Returns true if the animation was applied. */
 function tryQueueSlide(box, newIds, startIdx, curId) {
   if (!lastQueueIds || lastQueueIds.length !== newIds.length) { return false; }
   for (var i = 0; i < newIds.length; i++) {
@@ -3531,11 +3948,11 @@ function tryQueueSlide(box, newIds, startIdx, curId) {
   return true;
 }
 
-/* Lässt eine Queue-Zeile nach oben aus der Liste verschwinden (Höhe auf 0,
-   ausblenden) statt sie hart aus dem DOM zu reißen. */
+/* Makes a queue row disappear upward out of the list (height to 0, fade
+   out) instead of ripping it out of the DOM outright. */
 function slideRowAway(row) {
   row.style.height = row.offsetHeight + 'px';
-  row.offsetHeight; /* Reflow erzwingen, damit die Transition ab der festen Höhe startet */
+  row.offsetHeight; /* force a reflow so the transition starts from the fixed height */
   addClass(row, 'q-leave');
   row.style.height = '0px';
   setTimeout(function () {
@@ -3603,10 +4020,16 @@ $('bQueueClear').onclick = function () {
   });
 };
 
-$('volExpHit').onclick = function () {
+npOn('volExpHit', 'onclick', function () {
   volMembersOpen = !volMembersOpen;
   renderVolumeMembers();
-};
+});
+
+function closeStationMenu() {
+  stationMenuOpen = false;
+  $('stationMenu').style.display = 'none';
+  $('stationMore').className = 'station-more';
+}
 
 $('stationMore').onclick = function () {
   stationMenuOpen = !stationMenuOpen;
@@ -3620,6 +4043,62 @@ $('stationMore').onclick = function () {
   }
 };
 
+/* ==================================================================
+   QUICK ACTIONS
+   ==================================================================
+   Ramps one or more players' volume toward `target` over `durationMs`
+   by re-sending players/cmd/volume_set (or group_volume for group
+   players, same rule the volume slider itself uses) every 150ms. */
+function fadeVolume(ids, target, durationMs, cb) {
+  var steps = Math.max(1, Math.round(durationMs / 150));
+  var starts = {};
+  for (var i = 0; i < ids.length; i++) {
+    var p = players[ids[i]];
+    var v = p ? ((p.volume_level === null || p.volume_level === undefined) ? p.group_volume : p.volume_level) : null;
+    starts[ids[i]] = (v === null || v === undefined) ? target : v;
+  }
+  var step = 0;
+  var timer = setInterval(function () {
+    step++;
+    var frac = Math.min(1, step / steps);
+    for (var j = 0; j < ids.length; j++) {
+      var pid = ids[j];
+      var lvl = Math.round(starts[pid] + (target - starts[pid]) * frac);
+      var p2 = players[pid];
+      var useGroup = p2 && (p2.volume_level === null || p2.volume_level === undefined);
+      send(useGroup ? 'players/cmd/group_volume' : 'players/cmd/volume_set', { player_id: pid, volume_level: lvl });
+    }
+    if (step >= steps) {
+      clearInterval(timer);
+      if (cb) { cb(); }
+    }
+  }, 150);
+}
+
+/* Play Music: resumes the active player (MA has no separate "play last
+   track" command - the queue already sits at its last position after a
+   pause/stop, so resuming is the closest available primitive) and fades
+   its volume up to 50% over 3s. */
+$('qaPlayMusic').onclick = function () {
+  closeStationMenu();
+  if (!activeId) { toast(t('common.noPlayerSelected'), true); return; }
+  if (!isPlayerPlaying(activeId)) { cmd('players/cmd/play_pause', { player_id: activeId }); }
+  fadeVolume([activeId], 50, 3000);
+};
+
+/* Sleep: fades every known player down to 0% over 5s, then pauses
+   whichever of them were actually playing. */
+$('qaSleep').onclick = function () {
+  closeStationMenu();
+  toast(t('qa.sleeping'));
+  var ids = playerIds.slice();
+  fadeVolume(ids, 0, 5000, function () {
+    for (var i = 0; i < ids.length; i++) {
+      if (isPlayerPlaying(ids[i])) { cmd('players/cmd/play_pause', { player_id: ids[i] }); }
+    }
+  });
+};
+
 document.addEventListener('click', function (e) {
   if (!stationMenuOpen && !groupMenuOpen && !accentMenuOpen) { return; }
   var n = e.target;
@@ -3628,9 +4107,7 @@ document.addEventListener('click', function (e) {
     if (n.className && typeof n.className === 'string' && (' ' + n.className + ' ').indexOf(' station ') >= 0) { return; }
     n = n.parentNode;
   }
-  stationMenuOpen = false;
-  $('stationMenu').style.display = 'none';
-  $('stationMore').className = 'station-more';
+  closeStationMenu();
   groupMenuOpen = false;
   $('groupMenu').style.display = 'none';
   accentMenuOpen = false;
@@ -3643,35 +4120,38 @@ document.addEventListener('click', function (e) {
 buildFilters();
 buildLibFilters();
 setLink(false);
-applyLanguage();
+paintStaticUI();
 probeClock();
 checkForUpdate();
 connect();
 setInterval(tick, 500);
 
-/* Erneut prüfen, wenn die App aus dem Hintergrund zurückkehrt - beim
-   Homescreen-Webclip gibt es sonst keinen zuverlässigen Zeitpunkt, an
-   dem WebKit von selbst eine frische Fassung nachlädt. */
+/* Check again whenever the app returns from the background - for the
+   homescreen web clip there's otherwise no reliable point at which
+   WebKit loads a fresh copy on its own. */
 document.addEventListener('visibilitychange', function () {
   if (!document.hidden) { checkForUpdate(); }
 }, false);
 window.addEventListener('pageshow', function () { checkForUpdate(); }, false);
 
-/* Zusaetzlich periodisch pruefen: Als dauerhaft sichtbares Kiosk-
-   Display feuern visibilitychange/pageshow auf einem wandmontierten
-   iPad oft wochenlang gar nicht mehr - dieser Timer ist der eigentlich
-   verlaessliche Update-Pfad, unabhaengig von WebKit-Lifecycle-Events. */
+/* Also check periodically: as a permanently visible kiosk display, a
+   wall-mounted iPad often doesn't fire visibilitychange/pageshow at all
+   for weeks - this timer is the actually reliable update path,
+   independent of WebKit lifecycle events. */
 setInterval(checkForUpdate, UPDATE_CHECK_INTERVAL_MS);
 
-switchTab('queue');
+switchTab('now');
 
-/* Scroll-Gummiband des Fensters unterdrücken, Listen scrollen weiter */
+/* Suppress the window's rubber-band scroll, but let lists (and the
+   scrollable full-screen pages - Now Playing when lyrics run long,
+   Radio's station grid) keep scrolling. */
 document.addEventListener('touchmove', function (e) {
   var n = e.target;
   while (n && n !== document.body) {
     if (n.className && String(n.className).indexOf('list') >= 0) { return; }
     if (n.className && String(n.className).indexOf('stations') >= 0) { return; }
     if (n.className && String(n.className).indexOf('sheet') >= 0) { return; }
+    if (n.id === 'pageNow' || n.id === 'pageRadio') { return; }
     n = n.parentNode;
   }
   e.preventDefault();
