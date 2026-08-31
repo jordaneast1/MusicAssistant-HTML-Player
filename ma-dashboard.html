@@ -256,11 +256,21 @@ html, body {
 .link.on { background: var(--success); }
 
 /* ---------- Page router ----------
-   .pages holds the 4 top-level pages (Now Playing / Radio / Library-and-
+   .main-row holds .pages side by side with #queuePanel (see "Queue
+   panel" further down) - a flex row, so opening the queue panel grows
+   #queuePanel's width and .pages (flex:1) shrinks to give it room,
+   instead of the panel overlaying .pages. #playbackBanner/.footer sit
+   outside .main-row (see the .wrap markup) and so stay full-width
+   whether the queue panel is open or not. */
+.main-row { -webkit-flex: 1; flex: 1; display: -webkit-flex; display: flex; min-height: 0; }
+/* .pages holds the 4 top-level pages (Now Playing / Radio / Library-and-
    Search); only one is display:flex at a time, toggled by switchTab().
    library and search share #pageLibSearch (see showLibSearchSide()) since
-   they're really the same two-column shell with a different right pane. */
-.pages { -webkit-flex: 1; flex: 1; display: -webkit-flex; display: flex; min-height: 0; }
+   they're really the same two-column shell with a different right pane.
+   min-width: 0 lets it actually shrink when #queuePanel grows (same
+   "flex items don't shrink below content size by default" issue as
+   .vol input[type=range] above). */
+.pages { -webkit-flex: 1; flex: 1; display: -webkit-flex; display: flex; min-height: 0; min-width: 0; }
 
 /* Heading shown at the top of every page (Now Playing / Radio / Library /
    Search), left-aligned with a thin border-bottom divider - always its
@@ -277,14 +287,22 @@ html, body {
 .page-title .pt-dim { color: var(--text-secondary); }
 
 #pageLibSearch { -webkit-flex: 1; flex: 1; display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; min-height: 0; }
-.libsearch-row { -webkit-flex: 1; flex: 1; display: -webkit-flex; display: flex; min-height: 0; }
-.left { width: 230px; padding: 16px; border-right: 1px solid var(--border); display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; }
+/* Generic "compact controls column + content" row, shared by Library/
+   Search (#pageLibSearch) and Radio (#pageRadio) - not library/search-
+   specific despite living right above their CSS, hence the generic
+   name. .hide-side (toggled by applyControlsPosition()) hides the .left
+   column entirely when the Banner control position is active, since the
+   controls then live in #playbackBanner instead. */
+.side-row { -webkit-flex: 1; flex: 1; display: -webkit-flex; display: flex; min-height: 0; }
+.side-row.hide-side .left { display: none; }
+.left { width: 240px; padding: 16px; border-right: 1px solid var(--border); display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; }
 .right { -webkit-flex: 1; flex: 1; display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; min-width: 0; padding: 20px; }
 
-/* Compact playback controls used inside .left (Library/Search) - the
-   full-size versions of the same .cover/.title/.btn/... classes live in
-   #pageNow (see above); this is the third and smallest sizing tier, so
-   the two-column list panes get most of the width. */
+/* Compact playback controls used inside .left (Library/Search/Radio) -
+   the full-size versions of the same .cover/.title/.btn/... classes
+   live in #pageNow (see above); this is one of two smaller sizing
+   tiers (see also #playbackBanner further down), so the two-column
+   list panes get most of the width. */
 .left .cover { width: 110px; height: 110px; margin: 0 auto 10px; }
 .left .cover .ph { font-size: 22px; line-height: 110px; }
 .left .title { font-size: 15px; line-height: 1.2; margin-bottom: 4px; max-height: 36px; }
@@ -297,6 +315,10 @@ html, body {
 .left .btn.big { width: 48px; height: 48px; border-radius: 24px; }
 .left .toggles { margin-bottom: 10px; }
 .left .tgl { font-size: 10px; padding: 5px 8px; margin: 0 3px; }
+/* Smaller nudge buttons here than the default .vol .nudge sizing (see
+   above) - the 240px-wide .left column has much less room to spare than
+   the Big/Banner control sets, so this tier gets a tighter fit. */
+.left .nudge { width: 16px; height: 16px; margin: 0 2px; font-size: 11px; }
 
 /* ---------- Now Playing (full-screen page) ----------
    Reuses the same .cover/.title/.transport/... classes as the compact
@@ -355,6 +377,102 @@ html, body {
 }
 .radio-tile .rt-ph { font-size: 40px; color: var(--border); text-align: center; line-height: 160px; }
 
+/* ---------- Playback banner (alternative to the .left side column) ----------
+   A real flex sibling of .main-row/.footer inside .wrap - NOT
+   position:fixed - so showing/hiding it (via applyControlsPosition(),
+   see the SETTINGS section in the main script) naturally grows/shrinks
+   .main-row and moves the footer; height is intentionally auto (not a
+   fixed px value) so it can also grow for the wide layout below without
+   the two having to agree on a shared magic number. Two responsive
+   variants share the same DOM/ids throughout
+   (queue/menu buttons, the dial+time labels) - purely a min-width media
+   query below switches between them, no JS breakpoint tracking or
+   markup swap needed:
+   - Narrow (below the media query's breakpoint, phone-sized) - the
+     original, plainest layout: cover/title/transport/volume in one row,
+     no queue or overflow-menu buttons (no room to spare), progress shown
+     only as a bare strip along the top edge.
+   - Wide (min-width media query further down) - adds the queue/overflow-
+     menu buttons to the row and turns the progress strip into a small
+     centered dial+time-labels row below it, matching how the .left/Big
+     sizing tiers already present it (see .dial/.dial-times above), just
+     smaller. */
+#playbackBanner {
+  -webkit-flex-shrink: 0; flex-shrink: 0; position: relative;
+  background: var(--bg-elevated); border-top: 1px solid var(--border);
+  display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column;
+  padding: 14px 16px;
+}
+.banner-row { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; }
+/* Classic three-part centering: .banner-left/.banner-right both grow from
+   a zero basis (flex: 1 1 0, wide mode only, see media query below), so
+   whatever's left over after .banner-center's own intrinsic width is
+   split evenly between them - .banner-center then sits mathematically
+   centered in the row regardless of how much either side's own content
+   takes up, without needing CSS grid. */
+.banner-left {
+  display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center;
+  -webkit-flex: 1 1 0; flex: 1 1 0; min-width: 0;
+}
+.banner-center { display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; -webkit-align-items: center; align-items: center; }
+.banner-right {
+  display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center;
+  -webkit-flex: 1 1 0; flex: 1 1 0; -webkit-justify-content: flex-end; justify-content: flex-end;
+}
+#playbackBanner .cover { width: 58px; height: 58px; margin: 0 12px 0 0; -webkit-flex-shrink: 0; flex-shrink: 0; }
+#playbackBanner .cover .ph { font-size: 22px; line-height: 58px; }
+#playbackBanner .banner-titles { min-width: 0; width: 220px; -webkit-flex-shrink: 0; flex-shrink: 0; overflow: hidden; }
+#playbackBanner .title {
+  font-size: 17px; line-height: 1.2; max-height: none; margin-bottom: 3px;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+#playbackBanner .sub { font-size: 12px; margin-bottom: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+#playbackBanner .transport { margin: 0; -webkit-flex-shrink: 0; flex-shrink: 0; }
+#playbackBanner .btn { width: 34px; height: 34px; border-radius: 17px; margin: 0 4px; }
+#playbackBanner .btn.big { width: 42px; height: 42px; border-radius: 21px; }
+#playbackBanner .heart { width: 34px; height: 34px; margin: 0 4px; -webkit-flex-shrink: 0; flex-shrink: 0; }
+#playbackBanner .heart span { font-size: 18px; line-height: 18px; }
+#playbackBanner .vol { -webkit-flex: 1; flex: 1; max-width: 280px; margin: 0 0 0 12px; }
+/* Narrow-viewport default: queue/menu buttons hidden (no room), progress
+   pinned as a thin strip along the banner's top edge instead of a normal
+   .dial row - matches the original single-row banner design. Escapes
+   .banner-center via position:absolute (against #playbackBanner, the
+   nearest positioned ancestor - .banner-center itself is never given
+   position:relative) rather than actually needing to leave the DOM. */
+#playbackBanner #npQueueBanner, #playbackBanner #npMenuBanner { display: none; }
+#playbackBanner .banner-timeline { position: absolute; top: 0; left: 0; right: 0; height: 3px; overflow: hidden; }
+#playbackBanner .dial { margin-bottom: 0; }
+#playbackBanner .dial-track { height: 3px; border-bottom: 0; background-image: none; cursor: pointer; }
+#playbackBanner .dial-fill { height: 100%; }
+#playbackBanner .dial-needle { display: none; }
+#playbackBanner .dial-times { display: none; }
+/* Wide-viewport variant - pure CSS, no JS breakpoint tracking needed
+   (#queuePanel's offset is measured from the banner's actual rendered
+   height instead, see syncBannerQueueOffset(), so it doesn't care which
+   variant is active either). Picked as a rough "not a phone" cutoff,
+   wide enough to fit the queue/menu buttons and volume alongside cover+
+   title+transport - can't be verified against real devices from here,
+   so treat as a starting point to refine after an on-device check. */
+@media (min-width: 680px) {
+  #playbackBanner #npQueueBanner, #playbackBanner #npMenuBanner { display: -webkit-flex; display: flex; }
+  #playbackBanner .banner-timeline {
+    position: static; margin-top: 6px; overflow: visible;
+    display: -webkit-flex; display: flex; -webkit-justify-content: center; justify-content: center;
+  }
+  #playbackBanner .dial { width: 280px; margin-bottom: 0; }
+  /* Same repeating tick marks as the regular .dial-track (see the base
+     rule further up), just resized to fit this tier's thinner 6px bar -
+     "similar to the now playing bar" per request, rather than the plain
+     flat strip narrow mode uses. */
+  #playbackBanner .dial-track {
+    height: 6px; border-bottom: 1px solid var(--border); cursor: pointer;
+    background-image: -webkit-repeating-linear-gradient(left, var(--border) 0, var(--border) 1px, transparent 1px, transparent 12px);
+    background-image: repeating-linear-gradient(to right, var(--border) 0, var(--border) 1px, transparent 1px, transparent 12px);
+    background-position: bottom left; background-repeat: repeat-x; background-size: 12px 6px;
+  }
+  #playbackBanner .dial-times { display: -webkit-flex; display: flex; font-size: 10px; margin-top: 3px; }
+}
+
 /* ---------- Footer navigation (icon-only, reuses the .tab pill logic) ---------- */
 .footer {
   height: 60px; border-top: 1px solid var(--border); background: var(--bg-elevated);
@@ -369,20 +487,25 @@ html, body {
 .footer .tab svg { display: block; }
 
 /* ---------- Queue panel ----------
-   One shared component, toggled from both the Library page
-   (#libQueueToggle) and the Now Playing page (#npQueueBig) - see
-   toggleQueuePanel()/openQueuePanel()/closeQueuePanel(). Fixed between
-   the header and footer (their heights are hardcoded to match: 68px/
-   60px), slides in from the right over whichever page is currently
-   showing rather than replacing that page's own content. */
+   One shared component, toggled from any of the suffixed #npQueue*
+   buttons (mini/Big/Radio/Banner) - see
+   toggleQueuePanel()/openQueuePanel()/closeQueuePanel(). A normal flex
+   item alongside .pages inside .main-row (see "Page router" above) -
+   deliberately NOT position:fixed/an overlay: opening it grows its own
+   width from 0, and since .pages is the other flex item in that same
+   row (flex:1), .pages shrinks by exactly that amount instead of the
+   panel covering it. #playbackBanner/.footer live outside .main-row, so
+   they're never affected either way. Because it's real layout space (not
+   an overlay), there's also no outside-click-to-close - only the
+   #npQueue* buttons themselves (toggling) or #queuePanelClose actually
+   close it, see the click wiring further down. */
 .queue-panel {
-  position: fixed; top: 68px; bottom: 60px; right: 0; width: 360px; max-width: 90vw; z-index: 22;
+  width: 0; max-width: 90vw; -webkit-flex-shrink: 0; flex-shrink: 0; overflow: hidden;
   background: var(--bg-elevated); border-left: 1px solid var(--border);
   display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column;
-  -webkit-transform: translateX(100%); transform: translateX(100%);
-  -webkit-transition: -webkit-transform 0.3s ease; transition: transform 0.3s ease;
+  -webkit-transition: width 0.3s ease; transition: width 0.3s ease;
 }
-.queue-panel.open { -webkit-transform: translateX(0); transform: translateX(0); }
+.queue-panel.open { width: 360px; }
 .queue-panel-head {
   display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center;
   padding: 16px 16px 10px; border-bottom: 1px solid var(--border); -webkit-flex-shrink: 0; flex-shrink: 0;
@@ -423,6 +546,11 @@ html, body {
   font-size: 27px; line-height: 1.15; letter-spacing: 0.4px; margin-bottom: 7px;
   max-height: 62px; overflow: hidden;
 }
+/* Only used on the Banner title (see wireNowNav()) - it doubles as the
+   album link there since there's no room for a separate .sub.album line
+   like the other sizing tiers have. */
+.title.tap { cursor: pointer; }
+.title.tap:active { color: var(--accent); }
 .heart {
   width: 44px; height: 44px; margin: -6px -8px 0 6px; -webkit-flex-shrink: 0; flex-shrink: 0;
   display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center;
@@ -432,6 +560,27 @@ html, body {
 .heart.on span { color: var(--accent); }
 .heart.busy span { color: var(--text-secondary); }
 .heart.hide { display: none; }
+
+/* Overflow menu (favorite/playlist/[info]) used instead of standalone
+   icon buttons in the compact/Radio/Banner control sets, to save room -
+   see #npMenu/#npMenuRadio/#npMenuBanner. Nested inside its own trigger
+   button (which carries position:relative, see below) so it anchors
+   correctly wherever that button ends up in each control set's layout,
+   rather than needing a size/position override per tier. */
+.np-menu-panel {
+  position: absolute; top: 100%; right: 0; margin-top: 6px; min-width: 190px; z-index: 6;
+  background: var(--bg-elevated); border: 1px solid var(--border); box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+}
+/* Opens upward instead - used by the Banner trigger, which sits just
+   above the footer with no room to open downward. */
+.np-menu-panel.up { top: auto; bottom: 100%; margin-top: 0; margin-bottom: 6px; }
+.np-menu-item {
+  padding: 12px 16px; font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 14px; color: var(--text); white-space: nowrap; cursor: pointer; border-bottom: 1px solid var(--border);
+}
+.np-menu-item:last-child { border-bottom: 0; }
+.np-menu-item:active { background: var(--surface-active); color: var(--accent); }
+#npMenu, #npMenuRadio, #npMenuBanner { position: relative; }
 
 .sub { font-size: 15px; color: var(--text-secondary); margin-bottom: 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .sub.album { color: var(--text-muted); font-size: 13px; margin-bottom: 18px; }
@@ -473,10 +622,25 @@ html, body {
 /* ---------- Volume ---------- */
 .vol { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; margin-top: auto; }
 .vol .lbl { font-family: "Roboto Mono", "Courier New", monospace; font-size: 12px; letter-spacing: 1.4px; color: var(--text-muted); width: 34px; }
-.vol input[type=range] { -webkit-appearance: none; -webkit-flex: 1; flex: 1; height: 30px; background: transparent; }
+/* min-width: 0 overrides the default min-width:auto flex items get for
+   form controls - without it the slider's own intrinsic width refuses to
+   shrink below its rendered content size, which was pushing it (plus the
+   nudge buttons after it) past the edge of narrow containers like .left
+   (230px) instead of actually sharing the row's flex space. */
+.vol input[type=range] { -webkit-appearance: none; -webkit-flex: 1; flex: 1; min-width: 0; height: 30px; background: transparent; }
 .vol input[type=range]::-webkit-slider-runnable-track { height: 3px; background: var(--border); }
 .vol input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; margin-top: -12px; border-radius: 13px; background: var(--accent); }
 .vol .val { font-family: "Roboto Mono", "Courier New", monospace; font-size: 13px; color: var(--text-secondary); width: 40px; text-align: right; }
+/* Nudge buttons flank every volume slider for precise single-step taps
+   (see VOL_NUDGE_STEP) - wired generically off whatever .vol row a
+   slider sits in, so they work the same in every control set (mini/Big/
+   Banner/Radio) without extra per-instance code. */
+.vol .nudge {
+  -webkit-flex-shrink: 0; flex-shrink: 0; width: 22px; height: 22px; margin: 0 3px;
+  display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; -webkit-justify-content: center; justify-content: center;
+  border: 1px solid var(--border); color: var(--text-secondary); font-size: 14px; line-height: 1; cursor: pointer; -webkit-user-select: none; user-select: none;
+}
+.vol .nudge:active { background: var(--surface); color: var(--accent); }
 
 .vol-exp { margin-top: 10px; }
 .vol-exp-hit {
@@ -526,19 +690,6 @@ html, body {
   font-family: "Roboto Mono", "Courier New", monospace; font-size: 11px; letter-spacing: 1.5px;
   text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;
 }
-
-/* Queue toggle button - opens the shared #queuePanel (see further down).
-   Deliberately its own bordered button, not a .filt chip, and placed
-   above the Filter/Sort/Source sections so it reads as a separate
-   action rather than another filter. */
-.queue-toggle {
-  display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center;
-  -webkit-flex-shrink: 0; flex-shrink: 0; -webkit-user-select: none; user-select: none; cursor: pointer;
-  font-family: "Roboto Mono", "Courier New", monospace; font-size: 12px; letter-spacing: 1.3px; text-transform: uppercase;
-  color: var(--text-secondary); border: 1px solid var(--border); padding: 9px 14px; margin-bottom: 14px;
-}
-.queue-toggle .qt-icon { margin-right: 8px; font-size: 16px; line-height: 1; }
-.queue-toggle.on { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
 
 /* Back bar above the results list (artist > album > …) */
 .crumbs {
@@ -592,6 +743,12 @@ html, body {
 }
 .row .s { font-size: 13px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row.now .n { color: var(--accent); }
+/* Already-played queue entries (position before the current item) are
+   dimmed - see queueRow()/renderQueueRows()'s isPlayed. Jumping back to
+   an earlier item re-renders from scratch (tryQueueSlide() bails on a
+   backward shift), so rows below the new position lose this class again
+   instead of staying stuck dim. */
+.row.played { opacity: 0.45; }
 .row .fav { width: 22px; -webkit-flex-shrink: 0; flex-shrink: 0; text-align: center; color: var(--accent); font-size: 15px; }
 .row .chev { width: 20px; -webkit-flex-shrink: 0; flex-shrink: 0; text-align: center; color: var(--text-faint); font-size: 19px; }
 .row .more {
@@ -803,6 +960,8 @@ html, body {
     <div class="menu-head" data-i18n="settings.title">Settings</div>
     <div class="menu-head" data-i18n="settings.defaultSource">Default Music Source (Library &amp; Search)</div>
     <div class="filters" id="settingsSources"></div>
+    <div class="menu-head" data-i18n="settings.controlsPosition">Playback Controls (Radio, Library &amp; Search)</div>
+    <div class="filters" id="settingsControlsPosition"></div>
   </div>
 
   <div class="station-menu" id="stationMenu" style="display:none;">
@@ -826,6 +985,12 @@ html, body {
     <div class="menu-head" data-i18n="top.accentColor">Accent color</div>
     <div class="swatches" id="accentSwatches"></div>
   </div>
+
+  <!-- .pages and #queuePanel are flex siblings in this row so opening the
+       queue panel shrinks .pages to make room instead of overlaying it -
+       #playbackBanner/.footer sit outside this row (see below) and so
+       stay full-width either way. -->
+  <div class="main-row">
 
   <div class="pages">
 
@@ -865,7 +1030,9 @@ html, body {
 
         <div class="vol">
           <div class="lbl" data-i18n="vol.label">Vol</div>
+          <div class="nudge" id="volDownBig">&#8722;</div>
           <input type="range" id="volBig" min="0" max="100" value="0">
+          <div class="nudge" id="volUpBig">&#43;</div>
           <div class="val" id="volValBig">0</div>
         </div>
         <div class="vol-exp" id="volExpBig" style="display:none;">
@@ -878,8 +1045,60 @@ html, body {
 
     <div id="pageRadio" style="display:none;">
       <div class="page-title" data-i18n="pagetitle.radio">Radio</div>
-      <div class="radio-page-body">
+      <div class="side-row">
+
+      <div class="left">
+        <div class="cover" id="coverRadio"><div class="ph show">&#9835;</div></div>
+        <div class="titlerow">
+          <div class="title" id="titleRadio" data-i18n="now.nothingSelected">Nothing selected</div>
+          <div class="heart" id="npQueueRadio"><span>&#9776;</span></div>
+          <div class="heart" id="npMenuRadio">
+            <span>&#8942;</span>
+            <div class="np-menu-panel" id="npMenuPanelRadio" style="display:none;">
+              <div class="np-menu-item" id="npFavRowRadio" data-i18n="sheet.favDefault">Favorite …</div>
+              <div class="np-menu-item" id="npPlaylistRowRadio" data-i18n="sheet.addToPlaylist">Add to playlist</div>
+            </div>
+          </div>
+        </div>
+        <div class="sub" id="artistRadio"></div>
+        <div class="sub album" id="albumRadio"></div>
+
+        <div class="dial">
+          <div class="dial-track" id="dialTrackRadio">
+            <div class="dial-fill" id="dialFillRadio"></div>
+            <div class="dial-needle" id="dialNeedleRadio"></div>
+          </div>
+          <div class="dial-times"><span id="tPosRadio">0:00</span><span id="tDurRadio">0:00</span></div>
+        </div>
+
+        <div class="transport">
+          <div class="btn" id="bPrevRadio"></div>
+          <div class="btn big" id="bPlayRadio"></div>
+          <div class="btn" id="bNextRadio"></div>
+        </div>
+
+        <div class="toggles">
+          <div class="tgl" id="bShuffleRadio" data-i18n="toggle.shuffle">Shuffle</div>
+          <div class="tgl" id="bRepeatRadio" data-i18n="toggle.repeat">Repeat</div>
+          <div class="tgl" id="bAutomixRadio" data-i18n="toggle.automix">Automix</div>
+        </div>
+
+        <div class="vol">
+          <div class="nudge" id="volDownRadio">&#8722;</div>
+          <input type="range" id="volRadio" min="0" max="100" value="0">
+          <div class="nudge" id="volUpRadio">&#43;</div>
+          <div class="val" id="volValRadio">0</div>
+        </div>
+        <div class="vol-exp" id="volExpRadio" style="display:none;">
+          <div class="vol-exp-hit" id="volExpHitRadio" data-i18n="vol.groupVolumeCollapsed">Group volume &#9660;</div>
+          <div class="vol-members" id="volMembersRadio" style="display:none;"></div>
+        </div>
+      </div>
+
+      <div class="right radio-page-body">
         <div id="radioGrid"><div class="hint" data-i18n="common.loading">Loading …</div></div>
+      </div>
+
       </div>
     </div>
 
@@ -887,14 +1106,20 @@ html, body {
 
       <div class="page-title" id="libSearchPageTitle">Library</div>
 
-      <div class="libsearch-row">
+      <div class="side-row">
 
       <div class="left">
         <div class="cover" id="cover"><div class="ph show">&#9835;</div></div>
         <div class="titlerow">
           <div class="title" id="title" data-i18n="now.nothingSelected">Nothing selected</div>
-          <div class="heart hide" id="npAdd"><span>&#43;</span></div>
-          <div class="heart hide" id="npHeart"><span>&#9825;</span></div>
+          <div class="heart" id="npQueue"><span>&#9776;</span></div>
+          <div class="heart" id="npMenu">
+            <span>&#8942;</span>
+            <div class="np-menu-panel" id="npMenuPanel" style="display:none;">
+              <div class="np-menu-item" id="npFavRow" data-i18n="sheet.favDefault">Favorite …</div>
+              <div class="np-menu-item" id="npPlaylistRow" data-i18n="sheet.addToPlaylist">Add to playlist</div>
+            </div>
+          </div>
         </div>
         <div class="sub" id="artist"></div>
         <div class="sub album" id="album"></div>
@@ -920,8 +1145,9 @@ html, body {
         </div>
 
         <div class="vol">
-          <div class="lbl" data-i18n="vol.label">Vol</div>
+          <div class="nudge" id="volDown">&#8722;</div>
           <input type="range" id="vol" min="0" max="100" value="0">
+          <div class="nudge" id="volUp">&#43;</div>
           <div class="val" id="volVal">0</div>
         </div>
         <div class="vol-exp" id="volExp" style="display:none;">
@@ -962,9 +1188,6 @@ html, body {
         </div>
 
         <div id="paneLibrary" style="display:none;-webkit-flex:1;flex:1;min-height:0;-webkit-flex-direction:column;flex-direction:column;">
-          <div class="queue-toggle" id="libQueueToggle">
-            <span class="qt-icon">&#9776;</span><span data-i18n="lib.queue">Queue</span>
-          </div>
           <div class="filter-section">
             <div class="filter-label" data-i18n="filter.sectionFilter">Filter</div>
             <div class="filters" id="libFilters"></div>
@@ -1000,6 +1223,73 @@ html, body {
     <div class="list" id="queue"></div>
   </div>
 
+  </div>
+
+  <!-- Alternative to the .left side column, shown instead of it when the
+       "Banner" playback-controls position is active (see applyControlsPosition()
+       in the SETTINGS section) - a real flex sibling of .pages/.footer, not
+       position:fixed, so it naturally pushes the footer down when shown. -->
+  <div id="playbackBanner" style="display:none;">
+    <div class="banner-row">
+      <div class="banner-left">
+        <div class="cover" id="coverBanner"><div class="ph show">&#9835;</div></div>
+        <div class="banner-titles">
+          <div class="title" id="titleBanner" data-i18n="now.nothingSelected">Nothing selected</div>
+          <div class="sub" id="artistBanner"></div>
+        </div>
+      </div>
+      <!-- Center column stacks transport directly above the timeline; on
+           wide banners .banner-left/.banner-right grow equally (flex:1 1
+           0 each), which keeps this column mathematically centered
+           regardless of how much either side's own content takes up. -->
+      <div class="banner-center">
+        <div class="transport">
+          <div class="btn" id="bPrevBanner"></div>
+          <div class="btn big" id="bPlayBanner"></div>
+          <div class="btn" id="bNextBanner"></div>
+        </div>
+        <!-- Thin top-edge strip on narrow viewports (escapes this column
+             via position:absolute against #playbackBanner), a small
+             centered dial with time labels on wide ones - same DOM/
+             elements either way, see the CSS further up. -->
+        <div class="banner-timeline">
+          <div class="dial">
+            <div class="dial-track" id="dialTrackBanner">
+              <div class="dial-fill" id="dialFillBanner"></div>
+              <div class="dial-needle" id="dialNeedleBanner"></div>
+            </div>
+            <!-- Deliberately time-remaining (not elapsed, unlike every
+                 other dial-times pair) + total length - tick() writes
+                 #tRemainBanner directly instead of through npText('tPos',
+                 …), which every other sizing tier's elapsed-time span
+                 goes through. -->
+            <div class="dial-times"><span id="tRemainBanner">-0:00</span><span id="tDurBanner">0:00</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="banner-right">
+        <!-- Queue + overflow menu only have room on wide (non-phone) banners -
+             see the min-width media query further up; on narrow viewports
+             this whole row falls back to the original compact layout. -->
+        <div class="heart" id="npQueueBanner"><span>&#9776;</span></div>
+        <div class="heart" id="npMenuBanner">
+          <span>&#8942;</span>
+          <div class="np-menu-panel up" id="npMenuPanelBanner" style="display:none;">
+            <div class="np-menu-item" id="npFavRowBanner" data-i18n="sheet.favDefault">Favorite …</div>
+            <div class="np-menu-item" id="npPlaylistRowBanner" data-i18n="sheet.addToPlaylist">Add to playlist</div>
+            <div class="np-menu-item" id="npInfoRowBanner" data-i18n="sheet.viewMetadata">View metadata</div>
+          </div>
+        </div>
+        <div class="vol">
+          <div class="nudge" id="volDownBanner">&#8722;</div>
+          <input type="range" id="volBanner" min="0" max="100" value="0">
+          <div class="nudge" id="volUpBanner">&#43;</div>
+          <div class="val" id="volValBanner">0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <footer class="footer">
     <div class="tab" data-tab="now" id="footNow"></div>
     <div class="tab" data-tab="radio" id="footRadio"></div>
@@ -1013,6 +1303,7 @@ html, body {
     <h2 id="sheetTitle"></h2>
     <p id="sheetSub"></p>
     <button class="act prim" id="aNow" data-i18n="sheet.playNow">Play now</button>
+    <button class="act" id="aGently" data-i18n="sheet.gentlyPlayNow">Gently play now</button>
     <button class="act" id="aNext" data-i18n="sheet.playNext">Play next</button>
     <button class="act" id="aAdd" data-i18n="sheet.addToQueue">Add to queue</button>
     <button class="act" id="aPlaylist" data-i18n="sheet.addToPlaylist">Add to playlist</button>
@@ -1023,6 +1314,29 @@ html, body {
     <button class="act" id="aAlbum" data-i18n="label.album">Album</button>
     <button class="act" id="aMetadata" data-i18n="sheet.viewMetadata">View metadata</button>
     <button class="act ghost" id="aCancel" data-i18n="common.cancel">Cancel</button>
+  </div>
+</div>
+
+<!-- Separate sheet for queue entries (see queueRow()/openQueueItemSheet()) -
+     reuses the same .sheetbg/.sheet/.act CSS as #sheetbg above, but with a
+     different action set: queue-specific reordering/removal instead of
+     inserting a fresh copy into the queue. -->
+<div class="sheetbg" id="queueItemSheetbg">
+  <div class="sheet">
+    <h2 id="qiSheetTitle"></h2>
+    <p id="qiSheetSub"></p>
+    <button class="act prim" id="qiNow" data-i18n="sheet.playNow">Play now</button>
+    <button class="act" id="qiGently" data-i18n="sheet.gentlyPlayNow">Gently play now</button>
+    <button class="act" id="qiNext" data-i18n="queueSheet.playNext">Play next</button>
+    <button class="act" id="qiLast" data-i18n="queueSheet.playLast">Play last</button>
+    <button class="act" id="qiRemove" data-i18n="queueSheet.remove">Remove from queue</button>
+    <button class="act" id="qiPlaylist" data-i18n="sheet.addToPlaylist">Add to playlist</button>
+    <button class="act fav" id="qiFav" data-i18n="sheet.favDefault">Favorite …</button>
+    <div class="sep" id="qiNavSep" data-i18n="sheet.goTo">Go to</div>
+    <button class="act" id="qiOpen" data-i18n="sheet.open">Open</button>
+    <button class="act" id="qiArtist" data-i18n="label.artist">Artist</button>
+    <button class="act" id="qiAlbum" data-i18n="label.album">Album</button>
+    <button class="act ghost" id="qiCancel" data-i18n="common.cancel">Cancel</button>
   </div>
 </div>
 
@@ -1062,7 +1376,7 @@ html, body {
    pageshow for weeks - without the timer, the update check would be
    effectively dead.
    ================================================================== */
-var APP_VERSION = '2026-08-30.9';
+var APP_VERSION = '2026-09-01.1';
 var UPDATE_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 
 /* ==================================================================
@@ -1239,7 +1553,6 @@ var STRINGS = {
     "qa.sleeping": "Sleeping …",
     "radio.empty": "No favorite radio stations yet.",
     "radio.otherGroup": "Other",
-    "lib.queue": "Queue",
     "source.all": "All sources",
     "pagetitle.now": "Now Playing",
     "pagetitle.radio": "Radio",
@@ -1249,10 +1562,17 @@ var STRINGS = {
     "settings.defaultSource": "Default Music Source (Library & Search)",
     "settings.noDefaultSource": "No default (show all)",
     "settings.noSources": "No music providers found.",
+    "settings.controlsPosition": "Playback Controls (Radio, Library & Search)",
+    "settings.positionSide": "Side",
+    "settings.positionBanner": "Banner",
     "filter.sectionFilter": "Filter",
     "filter.sectionSort": "Sort",
     "filter.sectionSource": "Source",
+    "sheet.gentlyPlayNow": "Gently play now",
     "sheet.viewMetadata": "View metadata",
+    "queueSheet.playNext": "Play next",
+    "queueSheet.playLast": "Play last",
+    "queueSheet.remove": "Remove from queue",
     "metadata.loading": "Loading metadata …",
     "metadata.none": "No metadata available."
 };
@@ -1517,6 +1837,68 @@ function chooseDefaultSource(domain) {
   if (currentTab === 'search') { renderResults(lastResults); }
 }
 
+/* Second (and, so far, last) setting: where the compact playback controls
+   sit on Radio/Library/Search - 'side' (today's .left column, the
+   default) or 'banner' (a horizontal bar above the footer, see
+   #playbackBanner). Now Playing is unaffected either way - it always
+   keeps its own full-screen controls. Same per-device-only localStorage
+   reasoning as DEFAULT_SOURCE_KEY above. */
+var CONTROLS_POSITION_KEY = 'ma-dashboard-controls-position';
+
+function getControlsPosition() {
+  try {
+    var saved = localStorage.getItem(CONTROLS_POSITION_KEY);
+    if (saved === 'banner') { return 'banner'; }
+  } catch (e) { /* private browsing mode or similar - ignore */ }
+  return 'side';
+}
+
+function setControlsPosition(pos) {
+  try {
+    if (pos === 'banner') { localStorage.setItem(CONTROLS_POSITION_KEY, 'banner'); }
+    else { localStorage.removeItem(CONTROLS_POSITION_KEY); }
+  } catch (e) { /* fine either way */ }
+}
+
+function renderPositionSetting() {
+  var box = $('settingsControlsPosition');
+  box.innerHTML = '';
+  var current = getControlsPosition();
+  var opts = [['side', 'settings.positionSide'], ['banner', 'settings.positionBanner']];
+  for (var i = 0; i < opts.length; i++) {
+    (function (val, key) {
+      var el = document.createElement('div');
+      el.className = 'filt' + (val === current ? ' on' : '');
+      el.appendChild(document.createTextNode(t(key)));
+      el.onclick = function () { chooseControlsPosition(val); };
+      box.appendChild(el);
+    })(opts[i][0], opts[i][1]);
+  }
+}
+
+function chooseControlsPosition(pos) {
+  setControlsPosition(pos);
+  renderPositionSetting();
+  applyControlsPosition();
+}
+
+/* Decides whether the banner should actually be visible right now (banner
+   mode AND on a page that has compact controls at all - never on Now
+   Playing, which keeps its own full-screen layout) and toggles the
+   #playbackBanner/.left classes accordingly. Called at boot, at the end
+   of switchTab() (so it re-evaluates on every page change), and whenever
+   the setting itself changes. */
+function applyControlsPosition() {
+  var wantBanner = (getControlsPosition() === 'banner') &&
+    (currentTab === 'radio' || currentTab === 'library' || currentTab === 'search');
+  $('playbackBanner').style.display = wantBanner ? '-webkit-flex' : 'none';
+  $('playbackBanner').style.display = wantBanner ? 'flex' : 'none';
+  var rows = document.querySelectorAll('.side-row');
+  for (var i = 0; i < rows.length; i++) {
+    if (wantBanner) { addClass(rows[i], 'hide-side'); } else { removeClass(rows[i], 'hide-side'); }
+  }
+}
+
 $('settingsSwitch').onclick = function () {
   settingsMenuOpen = !settingsMenuOpen;
   $('settingsMenu').style.display = settingsMenuOpen ? 'block' : 'none';
@@ -1525,6 +1907,7 @@ $('settingsSwitch').onclick = function () {
     groupMenuOpen = false; $('groupMenu').style.display = 'none';
     accentMenuOpen = false; $('accentMenu').style.display = 'none';
     renderSettingsMenu();
+    renderPositionSetting();
   }
 };
 
@@ -2210,7 +2593,8 @@ var npFav = null;          /* resolved library item, or null */
    sharing the same ids with a "Big" suffix on the second set - these
    helpers write to both from a single call instead of every render
    function having to duplicate itself. */
-var NP_SUFFIXES = ['', 'Big'];
+var NP_SUFFIXES = ['', 'Big', 'Banner', 'Radio'];
+var VOL_NUDGE_STEP = 1;
 function npEls(base) {
   var out = [];
   for (var i = 0; i < NP_SUFFIXES.length; i++) {
@@ -2674,6 +3058,19 @@ function wireNowNav(mi) {
       alEl.onclick = function () { enterDetail(); openAlbum(mi.album); };
     }
   }
+
+  /* Banner has no separate .sub.album line (no room, see #playbackBanner
+     markup) - its title doubles as the album link instead, unlike every
+     other sizing tier where the title is never tappable. */
+  var titleBannerEl = $('titleBanner');
+  if (titleBannerEl) {
+    titleBannerEl.className = 'title';
+    titleBannerEl.onclick = null;
+    if (mi && mi.album && mi.album.item_id) {
+      titleBannerEl.className = 'title tap';
+      titleBannerEl.onclick = function () { enterDetail(); openAlbum(mi.album); };
+    }
+  }
 }
 
 function tick() {
@@ -2688,6 +3085,11 @@ function tick() {
   for (var ni = 0; ni < needleEls.length; ni++) { needleEls[ni].style.left = pct + '%'; }
   npText('tPos', fmt(pos));
   npText('tDur', fmt(dur));
+  /* Banner shows remaining time instead of elapsed (unlike every other
+     sizing tier) - a standalone id outside the npText('tPos', …) sweep
+     above, written directly here instead. */
+  var remainEl = $('tRemainBanner');
+  if (remainEl) { setText(remainEl, '-' + fmt(Math.max(0, dur - pos))); }
 }
 
 /* ==================================================================
@@ -2842,6 +3244,14 @@ function paintNowHeart() {
     h.className = 'heart' + (npFav.favorite ? ' on' : '');
     h.innerHTML = '<span>' + (npFav.favorite ? '&#9829;' : '&#9825;') + '</span>';
   }
+  /* Same favorite state, mirrored as a text row (see npFavRow) inside the
+     overflow menu the compact/Radio/Banner control sets use instead of a
+     standalone heart icon, to save room - see the NP MENU section. */
+  var rows = npEls('npFavRow');
+  for (var ri = 0; ri < rows.length; ri++) {
+    if (!npUri || npFav === null) { setText(rows[ri], t('sheet.favChecking')); continue; }
+    setText(rows[ri], npFav.favorite ? t('sheet.favRemoveAction') : t('sheet.favAddAction'));
+  }
 }
 
 function refreshNowFav() {
@@ -2867,6 +3277,91 @@ npOn('npHeart', 'onclick', function () {
 npOn('npAdd', 'onclick', function () {
   if (!npUri) { return; }
   openPlaylistSheet(npUri, $('title').textContent || t('now.currentTrackFallback'));
+});
+
+/* ==================================================================
+   NP OVERFLOW MENU
+   ==================================================================
+   The compact (.left), Radio and Banner control sets replace the
+   standalone favorite/add-to-playlist icons (Big keeps those, see
+   npHeart/npAdd above) with a single "..." button opening a small
+   popover of the same actions, plus "View metadata" on Banner - to save
+   room (see #npMenu/#npMenuRadio/#npMenuBanner). Each trigger's panel is
+   nested right inside it in the DOM (position:relative on the trigger,
+   see CSS), so it anchors correctly wherever that trigger ends up in
+   each control set's layout without a size/position override per tier.
+   Only one of the three triggers is ever visible at a time (their pages/
+   modes are mutually exclusive - see switchTab()/applyControlsPosition()),
+   so a single "which one is open" var is enough rather than one flag per
+   suffix. */
+var NP_MENU_SUFFIXES = ['', 'Radio', 'Banner'];
+var npMenuOpenSuffix = null;
+
+function npCurrentTitle() { return $('title').textContent || t('now.currentTrackFallback'); }
+
+function closeNpMenu() {
+  if (npMenuOpenSuffix === null) { return; }
+  var panel = $('npMenuPanel' + npMenuOpenSuffix);
+  if (panel) { panel.style.display = 'none'; }
+  npMenuOpenSuffix = null;
+}
+
+function toggleNpMenu(suffix) {
+  if (npMenuOpenSuffix === suffix) { closeNpMenu(); return; }
+  closeNpMenu();
+  var panel = $('npMenuPanel' + suffix);
+  if (!panel) { return; }
+  panel.style.display = 'block';
+  npMenuOpenSuffix = suffix;
+}
+
+for (var npmi = 0; npmi < NP_MENU_SUFFIXES.length; npmi++) {
+  (function (suffix) {
+    var trigger = $('npMenu' + suffix);
+    if (trigger) { trigger.onclick = function () { toggleNpMenu(suffix); }; }
+  })(NP_MENU_SUFFIXES[npmi]);
+}
+
+/* Same click-outside-to-close pattern as the queue panel above. */
+document.addEventListener('click', function (e) {
+  if (npMenuOpenSuffix === null) { return; }
+  var triggerId = 'npMenu' + npMenuOpenSuffix;
+  var n = e.target;
+  while (n && n !== document.body) {
+    if (n.id === triggerId) { return; }
+    n = n.parentNode;
+  }
+  closeNpMenu();
+}, false);
+
+/* Each row sits nested inside its trigger (see comment above), which has
+   its own onclick toggling the menu open/closed - without stopping
+   propagation here, a row click would bubble up to the trigger right
+   after closeNpMenu() runs and immediately reopen it. */
+npOn('npFavRow', 'onclick', function (e) {
+  if (e && e.stopPropagation) { e.stopPropagation(); }
+  closeNpMenu();
+  if (!npFav) { return; }
+  var was = !!npFav.favorite;
+  toggleFav(npFav, function (err) {
+    if (err) { toast(t('toast.favFailed', { err: err }), true); return; }
+    toast(was ? t('fav.removed') : t('fav.added'));
+    setTimeout(refreshNowFav, 600);
+  });
+});
+
+npOn('npPlaylistRow', 'onclick', function (e) {
+  if (e && e.stopPropagation) { e.stopPropagation(); }
+  closeNpMenu();
+  if (!npUri) { return; }
+  openPlaylistSheet(npUri, npCurrentTitle());
+});
+
+npOn('npInfoRow', 'onclick', function (e) {
+  if (e && e.stopPropagation) { e.stopPropagation(); }
+  closeNpMenu();
+  if (!npUri) { return; }
+  openMetadataSheet({ uri: npUri, name: npCurrentTitle() });
 });
 
 /* ==================================================================
@@ -3131,6 +3626,38 @@ npOn('bRepeat', 'onclick', function () {
         cmd(useGroup ? 'players/cmd/group_volume' : 'players/cmd/volume_set',
             { player_id: activeId, volume_level: lvl });
       }, false);
+    })(volEls[i]);
+  }
+})();
+
+/* Nudge buttons (-/+) flanking each slider - found via the slider's own
+   .vol row rather than a suffixed id, so they work for every control set
+   (mini/Big/Banner/Radio) without new lookup code per set. Reuses the
+   slider + its existing 'change' handler above instead of duplicating
+   the volume_set/group_volume command logic. */
+(function () {
+  var volEls = npEls('vol');
+  for (var i = 0; i < volEls.length; i++) {
+    (function (slider) {
+      var nudges = slider.parentNode.getElementsByClassName('nudge');
+      for (var j = 0; j < nudges.length; j++) {
+        (function (btn, dir) {
+          btn.onclick = function () {
+            var v = (parseInt(slider.value, 10) || 0) + dir * VOL_NUDGE_STEP;
+            if (v < 0) { v = 0; }
+            if (v > 100) { v = 100; }
+            slider.value = v;
+            npText('volVal', String(v));
+            if (typeof Event === 'function') {
+              slider.dispatchEvent(new Event('change'));
+            } else {
+              var evt = document.createEvent('Event');
+              evt.initEvent('change', true, true);
+              slider.dispatchEvent(evt);
+            }
+          };
+        })(nudges[j], j === 0 ? -1 : 1);
+      }
     })(volEls[i]);
   }
 })();
@@ -3720,9 +4247,12 @@ function openSheet(it, type, opts) {
 
 function closeSheet() { $('sheetbg').className = 'sheetbg'; pending2 = null; }
 
-function playPending(option) {
-  if (!pending2) { return; }
-  if (!activeQueueId) { toast(t('common.noPlayerSelected'), true); return; }
+/* Shared request-builder behind both playPending() and "Gently play now" -
+   kept as one place for the startFrom (album/playlist context) logic so
+   the two stay in sync instead of duplicating it. */
+function buildPlayPendingArgs(option) {
+  if (!pending2) { return null; }
+  if (!activeQueueId) { toast(t('common.noPlayerSelected'), true); return null; }
   var it = pending2.item;
   var args = { queue_id: activeQueueId, media: it.uri, option: option };
   /* From an album/playlist view, a track shouldn't play on its own -
@@ -3732,15 +4262,42 @@ function playPending(option) {
     args.media = from.uri;
     args.start_item = it.uri;
   }
-  var label = it.name;
+  return { args: args, label: it.name };
+}
+
+function playPending(option) {
+  var built = buildPlayPendingArgs(option);
+  if (!built) { return; }
   closeSheet();
-  send('player_queues/play_media', args, function (err) {
+  send('player_queues/play_media', built.args, function (err) {
     if (err) { toast(t('toast.playFailed', { err: err }), true); return; }
-    toast(option === 'replace' ? t('queue.playingLabel', { label: label }) : t('queue.addedLabel', { label: label }));
+    toast(option === 'replace' ? t('queue.playingLabel', { label: built.label }) : t('queue.addedLabel', { label: built.label }));
   });
 }
 
 $('aNow').onclick  = function () { playPending('replace'); };
+
+/* Softer variant of "Play now": fades the active player down to 0 over
+   3s, swaps the queue, then fades back up to whatever volume it was at
+   before the fade - reuses fadeVolume() (see QUICK ACTIONS) and
+   buildPlayPendingArgs() rather than duplicating either. */
+$('aGently').onclick = function () {
+  var built = buildPlayPendingArgs('replace');
+  if (!built || !activeId) { return; }
+  var p = activePlayer() || {};
+  var startVol = (p.volume_level === null || p.volume_level === undefined) ? p.group_volume : p.volume_level;
+  if (startVol === null || startVol === undefined) { startVol = 50; }
+  var fadeId = activeId;
+  closeSheet();
+  fadeVolume([fadeId], 0, 3000, function () {
+    send('player_queues/play_media', built.args, function (err) {
+      if (err) { toast(t('toast.playFailed', { err: err }), true); fadeVolume([fadeId], startVol, 3000); return; }
+      toast(t('queue.playingLabel', { label: built.label }));
+      fadeVolume([fadeId], startVol, 3000);
+    });
+  });
+};
+
 $('aNext').onclick = function () { playPending('next'); };
 $('aAdd').onclick  = function () { playPending('add'); };
 $('aFav').onclick  = function () {
@@ -3835,7 +4392,8 @@ $('metadataSheetbg').onclick = function (e) { if (e.target === $('metadataSheetb
    LIBRARY
    ==================================================================
    The Queue lives in the shared #queuePanel (see QUEUE PANEL further
-   down), not as one of these media types - #libQueueToggle opens it.
+   down), not as one of these media types - opened via #npQueue (the
+   mini control set, visible on this page too).
    ================================================================== */
 var LIB_TYPES = [
   { k: 'playlist',  lKey: 'media.playlists',   cmd: 'music/playlists/library_items',  type: 'playlist' },
@@ -4094,6 +4652,7 @@ function switchTab(name, pillName) {
     pane.style.display = visible[paneId2] ? 'flex' : 'none';
   }
   if (TABS[name] && TABS[name].init) { TABS[name].init(); }
+  applyControlsPosition();
 }
 
 /* Toggles which right-hand pane is shown inside the shared #pageLibSearch
@@ -4129,20 +4688,29 @@ $('footSearch').innerHTML = svgIcon('search');
 /* ==================================================================
    QUEUE PANEL
    ==================================================================
-   One shared #queuePanel component (markup lives right after .pages,
-   before .footer), slid in from the right over whichever page is
-   currently showing - not tied to any one page/tab. Opened from
-   #libQueueToggle (Library page) or #npQueueBig (Now Playing page);
-   both just call toggleQueuePanel(), so there is exactly one queue UI
-   to keep in sync rather than two. */
+   One shared #queuePanel component (markup lives inside .main-row,
+   right after .pages - see "Page router" in the CSS), pushing .pages
+   over to make room rather than overlaying it - see the CSS comment on
+   .queue-panel for why. Opened from any of the suffixed #npQueue*
+   buttons (Now Playing/mini/Radio/Banner - see npEls()/NP_SUFFIXES),
+   all of which just call toggleQueuePanel(), so there is exactly one
+   queue UI to keep in sync rather than several. The Library page used
+   to have its own separate #libQueueToggle button too, but that became
+   redundant once the mini/.left control set (visible on Library/Search
+   either way) got its own #npQueue button - see "Seiten-Router
+   (Fußnavigation)" in CLAUDE.md.
+   Deliberately no click-outside-to-close here (unlike the header
+   dropdowns further up, see closeStationMenu() and friends) - since the
+   panel is real layout space now rather than an overlay sitting on top
+   of the page, an accidental outside tap no longer needs a way to
+   dismiss it; only the #npQueue* buttons (toggling) or
+   #queuePanelClose actually close it. */
 var queuePanelOpen = false;
 
 function paintQueueToggle() {
-  var ids = ['libQueueToggle', 'npQueueBig'];
-  for (var i = 0; i < ids.length; i++) {
-    var el = $(ids[i]);
-    if (!el) { continue; }
-    if (queuePanelOpen) { addClass(el, 'on'); } else { removeClass(el, 'on'); }
+  var els = npEls('npQueue');
+  for (var i = 0; i < els.length; i++) {
+    if (queuePanelOpen) { addClass(els[i], 'on'); } else { removeClass(els[i], 'on'); }
   }
 }
 
@@ -4163,23 +4731,8 @@ function toggleQueuePanel() {
   if (queuePanelOpen) { closeQueuePanel(); } else { openQueuePanel(); }
 }
 
-$('libQueueToggle').onclick = toggleQueuePanel;
-$('npQueueBig').onclick = toggleQueuePanel;
+npOn('npQueue', 'onclick', toggleQueuePanel);
 $('queuePanelClose').onclick = closeQueuePanel;
-
-/* Same click-outside-to-close pattern as the header dropdowns further
-   up (see closeStationMenu() and friends) - a separate listener since
-   the queue panel isn't part of that mutually-exclusive group and can
-   be open at the same time as any page. */
-document.addEventListener('click', function (e) {
-  if (!queuePanelOpen) { return; }
-  var n = e.target;
-  while (n && n !== document.body) {
-    if (n.id === 'queuePanel' || n.id === 'libQueueToggle' || n.id === 'npQueueBig') { return; }
-    n = n.parentNode;
-  }
-  closeQueuePanel();
-}, false);
 
 var QUEUE_HISTORY_LIMIT = 3;
 
@@ -4224,15 +4777,18 @@ function loadQueue() {
     for (var ii = 0; ii < items.length; ii++) { newIds.push(items[ii].queue_item_id); }
 
     if (!tryQueueSlide(box, newIds, startIdx, curId)) {
-      renderQueueRows(box, q, items, startIdx, curId);
+      renderQueueRows(box, q, items, startIdx, curId, curIdx);
     }
     lastQueueIds = newIds;
     lastQueueStartIdx = startIdx;
   });
 }
 
-/* Full rebuild of the queue list (banner + rows starting from startIdx). */
-function renderQueueRows(box, q, items, startIdx, curId) {
+/* Full rebuild of the queue list (banner + rows starting from startIdx).
+   curIdx (the current item's position in the full items array) marks
+   every row before it as already-played (see queueRow()'s 'played'
+   class) - rows at/after curIdx are upcoming and stay full-brightness. */
+function renderQueueRows(box, q, items, startIdx, curId, curIdx) {
   box.innerHTML = '';
   if (q && q.radio_mode) {
     var rBanner = document.createElement('div');
@@ -4254,7 +4810,9 @@ function renderQueueRows(box, q, items, startIdx, curId) {
     return;
   }
   for (var i = startIdx; i < items.length; i++) {
-    box.appendChild(queueRow(items[i], i, curId === items[i].queue_item_id));
+    var isCurrent = curId === items[i].queue_item_id;
+    var isPlayed = curIdx >= 0 && i < curIdx;
+    box.appendChild(queueRow(items[i], i, isCurrent, isPlayed));
   }
 }
 
@@ -4272,14 +4830,23 @@ function tryQueueSlide(box, newIds, startIdx, curId) {
   var rows = box.getElementsByClassName('row');
   if (!rows.length) { return false; }
   var shift = startIdx - lastQueueStartIdx;
+  /* A negative shift means the current item moved backward (jumped back
+     into already-played territory) - the played/upcoming split below no
+     longer lines up with a simple forward slide, so fall back to a full
+     rebuild instead, which recomputes 'played' from scratch. */
   if (shift < 0 || shift > rows.length) { return false; }
 
   var rowList = [];
   for (var r = 0; r < rows.length; r++) { rowList.push(rows[r]); }
+  /* Rows are in ascending queue-position order, so everything before the
+     row matching curId has already played; from curId onward (inclusive)
+     nothing has played yet. */
+  var pastCur = false;
   for (var k = 0; k < rowList.length; k++) {
     var row = rowList[k];
-    if (row.getAttribute('data-qid') === String(curId)) { addClass(row, 'now'); }
+    if (row.getAttribute('data-qid') === String(curId)) { addClass(row, 'now'); pastCur = true; }
     else { removeClass(row, 'now'); }
+    if (pastCur) { removeClass(row, 'played'); } else { addClass(row, 'played'); }
   }
   for (var s = 0; s < shift; s++) { slideRowAway(rowList[s]); }
   return true;
@@ -4297,10 +4864,10 @@ function slideRowAway(row) {
   }, 340);
 }
 
-function queueRow(qi, index, isCurrent) {
+function queueRow(qi, index, isCurrent, isPlayed) {
   var mi = qi.media_item || qi;
   var row = document.createElement('div');
-  row.className = 'row' + (isCurrent ? ' now' : '');
+  row.className = 'row' + (isCurrent ? ' now' : '') + (isPlayed && !isCurrent ? ' played' : '');
   row.setAttribute('data-qid', qi.queue_item_id);
 
   var main = document.createElement('div');
@@ -4322,13 +4889,7 @@ function queueRow(qi, index, isCurrent) {
   txt.appendChild(n); txt.appendChild(s);
   main.appendChild(txt);
 
-  main.onclick = function () {
-    send('player_queues/play_index', { queue_id: activeQueueId, index: qi.queue_item_id },
-      function (err) {
-        if (err) { toast(t('toast.jumpFailed', { err: err }), true); return; }
-        setTimeout(loadQueue, 800);
-      });
-  };
+  main.onclick = function () { openQueueItemSheet(qi); };
   row.appendChild(main);
 
   var del = document.createElement('div');
@@ -4346,6 +4907,178 @@ function queueRow(qi, index, isCurrent) {
 
   return row;
 }
+
+/* ==================================================================
+   QUEUE ITEM SHEET
+   ==================================================================
+   A separate sheet from the regular media action sheet (#sheetbg/
+   openSheet() above) - reuses the same .sheetbg/.sheet/.act CSS, but the
+   action set is queue-specific: the track is already IN the queue, so
+   "play now"/"play next"/"play last" mean jump-to/reorder rather than
+   inserting a fresh copy, and there's a "remove from queue" instead of
+   "add to queue". MA has no documented reorder/move command (only the
+   play_media/play_index/delete_item/... commands this project already
+   relies on elsewhere - see CLAUDE.md), so "play next"/"play last" are
+   built from those: delete the existing entry, then re-insert it via
+   play_media with option 'next'/'add'. */
+var pendingQueueItem = null;   /* { qi, mi, resolved } */
+
+function openQueueItemSheet(qi) {
+  var mi = qi.media_item || qi;
+  pendingQueueItem = { qi: qi, mi: mi, resolved: null };
+  setText($('qiSheetTitle'), qi.name || mi.name || '—');
+  var who = artistsOf(mi);
+  if (who) {
+    setText($('qiSheetSub'), t('sheet.subtitleWithArtist', { artist: who, player: playerName(activeId) }));
+  } else {
+    setText($('qiSheetSub'), t('sheet.subtitlePlayerOnly', { player: playerName(activeId) }));
+  }
+
+  var mt = mi.media_type;
+  var top = stack.length ? stack[stack.length - 1] : null;
+  var alreadyOpen = top && top.item && mi.uri && top.item.uri === mi.uri;
+  $('qiOpen').className = 'act' + ((NAVIGABLE[mt] && !alreadyOpen) ? '' : ' gone');
+  $('qiPlaylist').className = 'act' + (mi.uri ? '' : ' gone');
+
+  var art = (mi.artists && mi.artists.length) ? mi.artists[0] : (mi.artist || null);
+  $('qiArtist').className = 'act' + ((art && art.item_id) ? '' : ' gone');
+  $('qiAlbum').className = 'act' + ((mi.album && mi.album.item_id) ? '' : ' gone');
+  var anyNav = $('qiOpen').className.indexOf('gone') < 0 ||
+               $('qiArtist').className.indexOf('gone') < 0 ||
+               $('qiAlbum').className.indexOf('gone') < 0;
+  $('qiNavSep').style.display = anyNav ? 'block' : 'none';
+
+  setText($('qiFav'), t('sheet.favChecking'));
+  $('qiFav').className = 'act fav';
+  if (mi.uri) {
+    resolveItem(mi.uri, function (err, resolved) {
+      if (!pendingQueueItem || pendingQueueItem.qi !== qi) { return; }
+      if (err) { setText($('qiFav'), t('sheet.favUnavailable')); return; }
+      pendingQueueItem.resolved = resolved;
+      setText($('qiFav'), resolved.favorite ? t('sheet.favRemoveAction') : t('sheet.favAddAction'));
+    });
+  } else {
+    setText($('qiFav'), t('sheet.favUnavailable'));
+  }
+
+  $('queueItemSheetbg').className = 'sheetbg on';
+}
+
+function closeQueueItemSheet() { $('queueItemSheetbg').className = 'sheetbg'; pendingQueueItem = null; }
+
+$('qiNow').onclick = function () {
+  if (!pendingQueueItem) { return; }
+  var qi = pendingQueueItem.qi;
+  closeQueueItemSheet();
+  send('player_queues/play_index', { queue_id: activeQueueId, index: qi.queue_item_id }, function (err) {
+    if (err) { toast(t('toast.jumpFailed', { err: err }), true); return; }
+    setTimeout(loadQueue, 800);
+  });
+};
+
+/* Same fade-out/jump/fade-in shape as the regular sheet's "Gently play
+   now" (see buildPlayPendingArgs()'s sibling above) - just play_index
+   instead of play_media, since the track is already queued. */
+$('qiGently').onclick = function () {
+  if (!pendingQueueItem || !activeId) { return; }
+  var qi = pendingQueueItem.qi;
+  var p = activePlayer() || {};
+  var startVol = (p.volume_level === null || p.volume_level === undefined) ? p.group_volume : p.volume_level;
+  if (startVol === null || startVol === undefined) { startVol = 50; }
+  var fadeId = activeId;
+  closeQueueItemSheet();
+  fadeVolume([fadeId], 0, 3000, function () {
+    send('player_queues/play_index', { queue_id: activeQueueId, index: qi.queue_item_id }, function (err) {
+      if (err) { toast(t('toast.jumpFailed', { err: err }), true); fadeVolume([fadeId], startVol, 3000); return; }
+      setTimeout(loadQueue, 800);
+      fadeVolume([fadeId], startVol, 3000);
+    });
+  });
+};
+
+$('qiNext').onclick = function () {
+  if (!pendingQueueItem) { return; }
+  var qi = pendingQueueItem.qi, mi = pendingQueueItem.mi;
+  closeQueueItemSheet();
+  if (!mi.uri) { return; }
+  send('player_queues/delete_item', { queue_id: activeQueueId, item_id_or_index: qi.queue_item_id }, function (err) {
+    if (err) { toast(t('toast.removeFailed', { err: err }), true); return; }
+    send('player_queues/play_media', { queue_id: activeQueueId, media: mi.uri, option: 'next' }, function (err2) {
+      if (err2) { toast(t('toast.playFailed', { err: err2 }), true); return; }
+      loadQueue();
+    });
+  });
+};
+
+$('qiLast').onclick = function () {
+  if (!pendingQueueItem) { return; }
+  var qi = pendingQueueItem.qi, mi = pendingQueueItem.mi;
+  closeQueueItemSheet();
+  if (!mi.uri) { return; }
+  send('player_queues/delete_item', { queue_id: activeQueueId, item_id_or_index: qi.queue_item_id }, function (err) {
+    if (err) { toast(t('toast.removeFailed', { err: err }), true); return; }
+    send('player_queues/play_media', { queue_id: activeQueueId, media: mi.uri, option: 'add' }, function (err2) {
+      if (err2) { toast(t('toast.playFailed', { err: err2 }), true); return; }
+      loadQueue();
+    });
+  });
+};
+
+$('qiRemove').onclick = function () {
+  if (!pendingQueueItem) { return; }
+  var qi = pendingQueueItem.qi;
+  closeQueueItemSheet();
+  send('player_queues/delete_item', { queue_id: activeQueueId, item_id_or_index: qi.queue_item_id }, function (err) {
+    if (err) { toast(t('toast.removeFailed', { err: err }), true); return; }
+    loadQueue();
+  });
+};
+
+$('qiPlaylist').onclick = function () {
+  if (!pendingQueueItem) { return; }
+  var qi = pendingQueueItem.qi, mi = pendingQueueItem.mi;
+  closeQueueItemSheet();
+  if (mi.uri) { openPlaylistSheet(mi.uri, mi.name || qi.name); }
+};
+
+$('qiFav').onclick = function () {
+  if (!pendingQueueItem || !pendingQueueItem.resolved) { return; }
+  var resolved = pendingQueueItem.resolved;
+  var was = !!resolved.favorite;
+  closeQueueItemSheet();
+  toggleFav(resolved, function (err) {
+    if (err) { toast(t('toast.favFailed', { err: err }), true); return; }
+    toast(was ? t('fav.removed') : t('fav.added'));
+  });
+};
+
+/* "Go to" also closes the queue panel itself, unlike the regular sheet -
+   otherwise the still-open panel would sit on top of the artist/album/
+   library view being navigated to. */
+$('qiOpen').onclick = function () {
+  if (!pendingQueueItem) { return; }
+  var mi = pendingQueueItem.mi;
+  closeQueueItemSheet();
+  closeQueuePanel();
+  openItem(mi, mi.media_type);
+};
+$('qiArtist').onclick = function () {
+  if (!pendingQueueItem) { return; }
+  var mi = pendingQueueItem.mi;
+  var art = (mi.artists && mi.artists.length) ? mi.artists[0] : mi.artist;
+  closeQueueItemSheet();
+  closeQueuePanel();
+  if (art) { openArtist(art); }
+};
+$('qiAlbum').onclick = function () {
+  if (!pendingQueueItem) { return; }
+  var al = pendingQueueItem.mi.album;
+  closeQueueItemSheet();
+  closeQueuePanel();
+  if (al) { openAlbum(al); }
+};
+$('qiCancel').onclick = closeQueueItemSheet;
+$('queueItemSheetbg').onclick = function (e) { if (e.target === $('queueItemSheetbg')) { closeQueueItemSheet(); } };
 
 $('bQueueReload').onclick = loadQueue;
 $('bQueueClear').onclick = function () {
