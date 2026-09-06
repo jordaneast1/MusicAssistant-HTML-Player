@@ -62,7 +62,7 @@
   --text-secondary: #8e9391;
   --text-muted: #6f7472;
   --text-faint: #55595a;
-  --accent: #e0a458;
+  --accent: #ffffff;
   --on-accent: #1a1c1b;
   --danger: #c0553c;
   --on-danger: #f4efe6;
@@ -83,7 +83,7 @@
     --text-secondary: #5c574f;
     --text-muted: #7c766c;
     --text-faint: #a39c8f;
-    --accent: #c8812b;
+    --accent: #6b6b66;
     --danger: #a8402c;
     --fav: #a8574a;
     --fav-border: #caa398;
@@ -101,7 +101,7 @@
   --text-secondary: #5c574f;
   --text-muted: #7c766c;
   --text-faint: #a39c8f;
-  --accent: #c8812b;
+  --accent: #6b6b66;
   --danger: #a8402c;
   --fav: #a8574a;
   --fav-border: #caa398;
@@ -421,18 +421,48 @@ html, body {
 }
 #playbackBanner .cover { width: 58px; height: 58px; margin: 0 12px 0 0; -webkit-flex-shrink: 0; flex-shrink: 0; }
 #playbackBanner .cover .ph { font-size: 22px; line-height: 58px; }
+/* overflow:hidden lives on this wrapper, not on .title/.sub themselves
+   (unlike every other sizing tier) - see the marquee comment below for
+   why. */
 #playbackBanner .banner-titles { min-width: 0; width: 220px; -webkit-flex-shrink: 0; flex-shrink: 0; overflow: hidden; }
 #playbackBanner .title {
   font-size: 17px; line-height: 1.2; max-height: none; margin-bottom: 3px;
-  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  white-space: nowrap; display: inline-block;
 }
-#playbackBanner .sub { font-size: 12px; margin-bottom: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+#playbackBanner .sub { font-size: 12px; margin-bottom: 0; white-space: nowrap; display: inline-block; }
+/* A title/artist too long for .banner-titles's 220px scrolls left to
+   reveal its tail, holds, scrolls back, holds, repeat - rather than just
+   truncating with an ellipsis like every other sizing tier (there's no
+   .sub.album line competing for space here, so the extra motion is
+   affordable). refreshBannerMarquee() (NOW PLAYING section) measures
+   .scrollWidth against the wrapper's clientWidth and only adds this
+   class - with the exact distance to scroll as --marquee-dist - when the
+   text actually overflows; .title/.sub above have no overflow:hidden of
+   their own, so the parent .banner-titles clips whichever one is
+   currently mid-scroll. */
+.marquee {
+  -webkit-animation: marqueeScroll 8s ease-in-out infinite; animation: marqueeScroll 8s ease-in-out infinite;
+}
+@-webkit-keyframes marqueeScroll {
+  0%, 20% { -webkit-transform: translateX(0); }
+  50%, 70% { -webkit-transform: translateX(var(--marquee-dist)); }
+  100% { -webkit-transform: translateX(0); }
+}
+@keyframes marqueeScroll {
+  0%, 20% { transform: translateX(0); }
+  50%, 70% { transform: translateX(var(--marquee-dist)); }
+  100% { transform: translateX(0); }
+}
 #playbackBanner .transport { margin: 0; -webkit-flex-shrink: 0; flex-shrink: 0; }
-#playbackBanner .btn { width: 34px; height: 34px; border-radius: 17px; margin: 0 4px; }
-#playbackBanner .btn.big { width: 42px; height: 42px; border-radius: 21px; }
+#playbackBanner .btn { width: 28px; height: 28px; border-radius: 14px; margin: 0 3px; }
+#playbackBanner .btn.big { width: 34px; height: 34px; border-radius: 17px; }
 #playbackBanner .heart { width: 34px; height: 34px; margin: 0 4px; -webkit-flex-shrink: 0; flex-shrink: 0; }
 #playbackBanner .heart span { font-size: 18px; line-height: 18px; }
-#playbackBanner .vol { -webkit-flex: 1; flex: 1; max-width: 280px; margin: 0 0 0 12px; }
+/* More compact than the default .vol sizing (see above) - narrower cap
+   and a smaller gap before it, freeing up room for the now-larger
+   cover/title on the left. */
+#playbackBanner .vol { -webkit-flex: 1; flex: 1; max-width: 170px; margin: 0 0 0 10px; }
+#playbackBanner .nudge { width: 18px; height: 18px; margin: 0 2px; font-size: 12px; }
 /* Narrow-viewport default: queue/menu buttons hidden (no room), progress
    pinned as a thin strip along the banner's top edge instead of a normal
    .dial row - matches the original single-row banner design. Escapes
@@ -788,6 +818,10 @@ html, body {
 .act.fav { color: var(--accent); }
 .act.ghost { background: transparent; color: var(--text-secondary); text-align: center; margin-top: 6px; }
 .act.gone { display: none; }
+/* Brief success state on the playlist button just tapped in
+   openPlaylistSheet() (see addToPlaylist()) - shown for a moment before
+   the sheet closes, as a clearer acknowledgement than the toast alone. */
+.act.added { background: var(--success); color: var(--on-accent); border-color: var(--success); cursor: default; }
 .sheet .sep {
   font-family: "Roboto Mono", "Courier New", monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
   color: var(--text-muted); padding: 14px 0 8px;
@@ -817,7 +851,7 @@ html, body {
     } catch (e) { /* private browsing mode or similar - ignore */ }
   })();
 
-  /* Freely choosable accent color (replaces the default gold #e0a458).
+  /* Freely choosable accent color (replaces the default white #ffffff).
      Deliberately applied here already, before the first paint (same
      reasoning as the theme above), AND defined as a global function, so
      the main script block further down can call it again on a user
@@ -827,11 +861,19 @@ html, body {
      this function - it stays the hand-picked value baked into the main
      CSS; only actual user selections (and track-derived colors) get a
      custom-property override injected via a style tag.
-     Presets are inspired by the Sydney Opera House: sail gold, harbour
-     blue, sunset orange, deep dusk navy, sandstone, daytime sky blue,
-     dawn blush on the sails. */
+     Presets: White, Blue, Light Blue, Light Orange. White is the one
+     preset whose light-theme pairing (see the base :root[data-theme=
+     "light"] rule) isn't run through deriveLightAccent() below either -
+     that function darkens by scaling lightness to 78% of the original,
+     which works well for the mid-toned presets but barely dents a color
+     that starts at 100% lightness, so white gets the same hand-picked
+     treatment as the default already did: a medium neutral grey, dark
+     enough to read as text on a light page while staying light enough
+     for --on-accent's dark text to still contrast against it as a
+     background (the same two-way constraint every preset needs to
+     satisfy, see the Dark/Light Mode section in CLAUDE.md). */
   var ACCENT_STORAGE_KEY = 'ma-dashboard-accent';
-  var ACCENT_PRESETS = ['#e0a458', '#3e86a0', '#e27a3f', '#2f5d7c', '#b98b56', '#5b9bd5', '#c97b84'];
+  var ACCENT_PRESETS = ['#ffffff', '#3d7dd8', '#8ecae6', '#f4a261'];
 
   function hexToRgb(hex) {
     var h = hex.replace('#', '');
@@ -1344,6 +1386,7 @@ html, body {
   <div class="sheet">
     <h2 data-i18n="playlistSheet.title">Add to playlist</h2>
     <p id="playlistSheetSub"></p>
+    <div class="filters" id="playlistSortFilters" style="margin-bottom:12px;"></div>
     <div class="list" id="playlistList" style="max-height:320px;border:1px solid var(--border);margin-bottom:12px;"></div>
     <button class="act prim" id="plCreate" data-i18n="playlistSheet.createNew">New playlist …</button>
     <button class="act ghost" id="plCancel" data-i18n="common.cancel">Cancel</button>
@@ -1376,7 +1419,7 @@ html, body {
    pageshow for weeks - without the timer, the update check would be
    effectively dead.
    ================================================================== */
-var APP_VERSION = '2026-09-01.1';
+var APP_VERSION = '2026-09-01.2';
 var UPDATE_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 
 /* ==================================================================
@@ -1508,10 +1551,11 @@ var STRINGS = {
     "playlistSheet.title": "Add to playlist",
     "playlistSheet.createNew": "New playlist …",
     "playlistSheet.empty": "No playlists yet.",
-    "playlistSheet.sectionFavorites": "Favorites",
-    "playlistSheet.sectionAll": "All playlists",
+    "playlistSheet.sortRecent": "Recently added",
+    "playlistSheet.sortAlpha": "Alphabetical",
     "playlistSheet.loadError": "Failed to load.",
     "playlistSheet.added": "Added “{track}” to “{playlist}”",
+    "playlistSheet.addedShort": "✓ Added to {playlist}",
     "playlistSheet.newPrompt": "Name of the new playlist:",
     "playlistSheet.created": "Playlist created. Please select it.",
     "playlistSheet.noTrackSelected": "No track selected",
@@ -1897,6 +1941,7 @@ function applyControlsPosition() {
   for (var i = 0; i < rows.length; i++) {
     if (wantBanner) { addClass(rows[i], 'hide-side'); } else { removeClass(rows[i], 'hide-side'); }
   }
+  if (wantBanner) { refreshBannerMarquee(); }
 }
 
 $('settingsSwitch').onclick = function () {
@@ -2756,6 +2801,7 @@ function renderNow() {
 
   /* Make artist/album tappable when we have a real media object */
   wireNowNav(mi);
+  refreshBannerMarquee();
 
   var pic = fixUrl(media.image_url, CFG.IMG_COVER) || imgUrl(mi, CFG.IMG_COVER) || imgUrl(media, CFG.IMG_COVER);
   var covs = npEls('cover');
@@ -3073,6 +3119,29 @@ function wireNowNav(mi) {
   }
 }
 
+/* Toggles the scrolling .marquee animation (see CSS) on the Banner
+   title/artist, based on whether its text actually overflows the fixed-
+   width .banner-titles wrapper it sits in - called from renderNow()
+   (whenever the text itself might have changed) and from
+   applyControlsPosition() (whenever the banner's own visibility might
+   have just changed, since a hidden banner measures as 0-width). */
+function refreshBannerMarquee() {
+  marqueeFor($('titleBanner'));
+  marqueeFor($('artistBanner'));
+}
+
+function marqueeFor(el) {
+  if (!el) { return; }
+  removeClass(el, 'marquee');
+  var container = el.parentNode;
+  if (!container || !container.offsetWidth) { return; }   /* banner not laid out right now */
+  var overflow = el.scrollWidth - container.clientWidth;
+  if (overflow > 4) {
+    el.style.setProperty('--marquee-dist', (-overflow - 6) + 'px');
+    addClass(el, 'marquee');
+  }
+}
+
 function tick() {
   var dur = curDur || 0;
   var pos = anchorPos + (isPlaying ? (serverNow() - anchorAt) : 0);
@@ -3370,22 +3439,50 @@ npOn('npInfoRow', 'onclick', function (e) {
 var userPlaylists = [];
 var playlistSheetTarget = null;
 
+/* Recently-added vs alphabetical is a sort *within* each provider group
+   (see renderPlaylistList()), not an alternative to it - both orderings
+   keep playlists under their provider subheading. */
+var PLAYLIST_SORT_MODES = [
+  { k: 'recent', lKey: 'playlistSheet.sortRecent' },
+  { k: 'alpha',  lKey: 'playlistSheet.sortAlpha' }
+];
+var playlistSortMode = 'recent';
+
+/* timestamp_added is MA's library-row insertion time - present on every
+   library item in practice, but falls back to 0 (stable/no-op ordering)
+   if a given provider/version ever omits it, rather than throwing. */
+function comparePlaylistsRecent(a, b) { return (b.timestamp_added || 0) - (a.timestamp_added || 0); }
+function comparePlaylistsAlpha(a, b) {
+  var an = (a.name || '').toLowerCase();
+  var bn = (b.name || '').toLowerCase();
+  return an < bn ? -1 : (an > bn ? 1 : 0);
+}
+
+function renderPlaylistSortFilters() {
+  var box = $('playlistSortFilters');
+  box.innerHTML = '';
+  for (var i = 0; i < PLAYLIST_SORT_MODES.length; i++) {
+    (function (mode) {
+      var el = document.createElement('div');
+      el.className = 'filt' + (mode.k === playlistSortMode ? ' on' : '');
+      el.appendChild(document.createTextNode(t(mode.lKey)));
+      el.onclick = function () {
+        playlistSortMode = mode.k;
+        renderPlaylistSortFilters();
+        renderPlaylistList(false);
+      };
+      box.appendChild(el);
+    })(PLAYLIST_SORT_MODES[i]);
+  }
+}
+
 function loadUserPlaylists(cb) {
   send('music/playlists/library_items', {
     limit: CFG.LIST_LIMIT,
-    offset: 0,
-    order_by: 'name'
+    offset: 0
   }, function (err, items) {
     if (err) { cb(err, null); return; }
     userPlaylists = items || [];
-    userPlaylists.sort(function (a, b) {
-      var af = a.favorite ? 1 : 0;
-      var bf = b.favorite ? 1 : 0;
-      if (af !== bf) { return bf - af; }
-      var an = (a.name || '').toLowerCase();
-      var bn = (b.name || '').toLowerCase();
-      return an < bn ? -1 : (an > bn ? 1 : 0);
-    });
     cb(null, userPlaylists);
   });
 }
@@ -3394,6 +3491,7 @@ function openPlaylistSheet(uri, name) {
   if (!uri) { toast(t('playlistSheet.noTrackSelected'), true); return; }
   playlistSheetTarget = { uri: uri, name: name || t('label.track') };
   setText($('playlistSheetSub'), playlistSheetTarget.name);
+  renderPlaylistSortFilters();
   $('playlistSheetbg').className = 'sheetbg on';
   renderPlaylistList(true);
   loadUserPlaylists(function (err) {
@@ -3406,6 +3504,11 @@ function openPlaylistSheet(uri, name) {
   });
 }
 
+/* Grouped by provider (see itemProviderDomains()/sourceLabel(), also
+   used by the Music-Source-Filter feature) - each group heading is a
+   provider name, sorted alphabetically; playlists within a group sort by
+   playlistSortMode instead (recently added or alphabetical), so the
+   provider grouping itself never changes when that toggle does. */
 function renderPlaylistList(loading) {
   var box = $('playlistList');
   box.innerHTML = '';
@@ -3417,29 +3520,40 @@ function renderPlaylistList(loading) {
     box.innerHTML = '<div class="hint">' + t('playlistSheet.empty') + '</div>';
     return;
   }
-  var sawFav = false;
-  var sawAll = false;
+
+  var groups = {};
+  var domains = [];
   for (var i = 0; i < userPlaylists.length; i++) {
-    (function (pl) {
-      if (pl.favorite && !sawFav) {
-        sawFav = true;
-        var favSec = document.createElement('div');
-        favSec.className = 'pl-sec';
-        setText(favSec, t('playlistSheet.sectionFavorites'));
-        box.appendChild(favSec);
-      } else if (!pl.favorite && !sawAll) {
-        sawAll = true;
-        var allSec = document.createElement('div');
-        allSec.className = 'pl-sec';
-        setText(allSec, t('playlistSheet.sectionAll'));
-        box.appendChild(allSec);
-      }
-      var btn = document.createElement('button');
-      btn.className = 'act';
-      setText(btn, pl.name || t('label.playlist'));
-      btn.onclick = function () { addToPlaylist(pl); };
-      box.appendChild(btn);
-    })(userPlaylists[i]);
+    var pl = userPlaylists[i];
+    var pds = itemProviderDomains(pl);
+    var domain = pds.length ? pds[0] : 'library';
+    if (!groups[domain]) { groups[domain] = []; domains.push(domain); }
+    groups[domain].push(pl);
+  }
+  domains.sort(function (a, b) {
+    var la = sourceLabel(a), lb = sourceLabel(b);
+    return la < lb ? -1 : (la > lb ? 1 : 0);
+  });
+
+  var cmp = playlistSortMode === 'alpha' ? comparePlaylistsAlpha : comparePlaylistsRecent;
+  for (var g = 0; g < domains.length; g++) {
+    var domain2 = domains[g];
+    var sec = document.createElement('div');
+    sec.className = 'pl-sec';
+    setText(sec, sourceLabel(domain2));
+    box.appendChild(sec);
+
+    var list = groups[domain2].slice();
+    list.sort(cmp);
+    for (var j = 0; j < list.length; j++) {
+      (function (pl2) {
+        var btn = document.createElement('button');
+        btn.className = 'act';
+        setText(btn, pl2.name || t('label.playlist'));
+        btn.onclick = function () { addToPlaylist(pl2, btn); };
+        box.appendChild(btn);
+      })(list[j]);
+    }
   }
 }
 
@@ -3448,7 +3562,12 @@ function renderPlaylistListError() {
   box.innerHTML = '<div class="hint">' + t('playlistSheet.loadError') + '</div>';
 }
 
-function addToPlaylist(playlist) {
+/* btnEl (the specific playlist button just tapped) is optional - passed
+   from renderPlaylistList() but not from createPlaylistAndAdd(), which
+   has no existing button to react on and just closes+toasts immediately.
+   When given, it flashes to a brief "Added" state (.act.added) before
+   the sheet closes, as a clearer acknowledgement than the toast alone. */
+function addToPlaylist(playlist, btnEl) {
   if (!playlistSheetTarget || !playlistSheetTarget.uri) { return; }
   send('music/playlists/add_playlist_tracks', {
     db_playlist_id: playlist.item_id,
@@ -3458,8 +3577,20 @@ function addToPlaylist(playlist) {
       toast(t('toast.addFailed', { err: err }), true);
       return;
     }
-    closePlaylistSheet();
-    toast(t('playlistSheet.added', { track: playlistSheetTarget.name, playlist: playlist.name || t('label.playlist') }));
+    var track = playlistSheetTarget.name;
+    var plName = playlist.name || t('label.playlist');
+    if (btnEl) {
+      btnEl.className = 'act added';
+      btnEl.disabled = true;
+      setText(btnEl, t('playlistSheet.addedShort', { playlist: plName }));
+      setTimeout(function () {
+        closePlaylistSheet();
+        toast(t('playlistSheet.added', { track: track, playlist: plName }));
+      }, 550);
+    } else {
+      closePlaylistSheet();
+      toast(t('playlistSheet.added', { track: track, playlist: plName }));
+    }
   });
 }
 
