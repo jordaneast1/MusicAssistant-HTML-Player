@@ -349,6 +349,29 @@ html, body {
 #pageNow .sub { text-align: center; white-space: normal; }
 #pageNow .sub.album { text-align: center; }
 
+/* ---------- Lounge (home page: quick actions + recommendations) ---------- */
+#pageLounge {
+  -webkit-flex: 1; flex: 1; min-height: 0;
+  display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column;
+}
+.lounge-body { -webkit-flex: 1; flex: 1; min-height: 0; padding: 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.lounge-section { margin-bottom: 26px; }
+.lounge-section:last-child { margin-bottom: 0; }
+.lounge-section .qa-row { margin-top: 10px; }
+/* .menu-head is otherwise only styled when scoped under .station-menu/
+   .group-menu (see above) - scoped the same way here instead of making
+   that shared base class unscoped, so section headings on this page
+   (Quick Actions, Recently Played, Recommended, …) actually render with
+   real typography instead of plain default div text. */
+#pageLounge .menu-head {
+  font-family: "Roboto Mono", "Courier New", monospace; font-size: 12px; letter-spacing: 1.6px;
+  text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px;
+}
+/* Per-provider subheadings one level below the section's own .menu-head
+   (e.g. "Recently Played" > "Tidal") - reuses the same look the Add-to-
+   Playlist sheet's provider grouping already uses (see "Add to Playlist"). */
+.lounge-section .pl-sec:first-of-type { padding-top: 0; }
+
 /* ---------- Radio (favorite stations grid, grouped by country) ---------- */
 #pageRadio {
   -webkit-flex: 1; flex: 1; min-height: 0;
@@ -702,6 +725,15 @@ html, body {
   -webkit-appearance: none; border: 0; background: var(--accent); color: var(--on-accent); font-family: "Roboto Mono", "Courier New", monospace;
   font-size: 14px; letter-spacing: 1.6px; text-transform: uppercase; padding: 0 24px; margin-left: 8px; border-radius: 0; cursor: pointer;
 }
+/* Icon-only variant (currently just #bQueueRadio, see "RADIO MODE") -
+   muted/off by default like #bQueueClear, switches to the normal accent
+   fill (via .on) while radio mode is actually running. */
+.searchbar button.qtoolbar-icon {
+  background: var(--surface); color: var(--text-secondary); padding: 0 14px;
+  display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; -webkit-justify-content: center; justify-content: center;
+}
+.searchbar button.qtoolbar-icon svg { display: block; width: 20px; height: 20px; }
+.searchbar button.qtoolbar-icon.on { background: var(--accent); color: var(--on-accent); }
 .filters { display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap; flex-wrap: wrap; margin-bottom: 14px; }
 .filt {
   font-family: "Roboto Mono", "Courier New", monospace; font-size: 12px; letter-spacing: 1.3px; text-transform: uppercase;
@@ -710,6 +742,10 @@ html, body {
 .filt.on { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
 .filt.fav { border-color: var(--fav-border); color: var(--fav); }
 .filt.fav.on { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+/* Sort-direction toggle (see buildLibFilters()) - a single arrow glyph
+   rather than a text label, so it gets a narrow fixed width and centered
+   text instead of .filt's default left-aligned/content-width sizing. */
+.filt.dir { width: 34px; text-align: center; padding-left: 0; padding-right: 0; }
 
 /* Groups the Filter/Sort/Source chip rows in Library and Search into
    clearly separate sections - a thin divider plus a small label above
@@ -773,6 +809,12 @@ html, body {
 }
 .row .s { font-size: 13px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row.now .n { color: var(--accent); }
+/* Small tag next to a queue row's track name for items radio mode added
+   (see queueRow()/"RADIO MODE") - inline with the (nowrap, ellipsis'd)
+   track name, so it rides along with the text and can get clipped with
+   it on a long title rather than needing its own layout slot. */
+.q-radio-tag { display: -webkit-inline-flex; display: inline-flex; vertical-align: middle; margin-left: 5px; width: 11px; height: 11px; color: var(--accent); }
+.q-radio-tag svg { display: block; width: 100%; height: 100%; }
 /* Already-played queue entries (position before the current item) are
    dimmed - see queueRow()/renderQueueRows()'s isPlayed. Jumping back to
    an earlier item re-renders from scratch (tryQueueSlide() bails on a
@@ -1036,6 +1078,21 @@ html, body {
 
   <div class="pages">
 
+    <div id="pageLounge" style="display:none;">
+      <div class="page-title" data-i18n="pagetitle.lounge">Lounge</div>
+      <div class="lounge-body">
+        <div class="lounge-section">
+          <div class="menu-head" data-i18n="top.quickActions">Quick Actions</div>
+          <div class="qa-row">
+            <div class="qa-btn" id="qaPlayMusicLounge" data-i18n="qa.playMusic">Play Music</div>
+            <div class="qa-btn" id="qaSleepLounge" data-i18n="qa.sleep">Sleep</div>
+          </div>
+        </div>
+        <div id="loungeRecent"></div>
+        <div id="loungeRecommended"></div>
+      </div>
+    </div>
+
     <div id="pageNow" style="display:none;">
       <div class="page-title" id="nowPageTitle">Now Playing</div>
       <div class="now-content">
@@ -1067,7 +1124,6 @@ html, body {
         <div class="toggles">
           <div class="tgl" id="bShuffleBig" data-i18n="toggle.shuffle">Shuffle</div>
           <div class="tgl" id="bRepeatBig" data-i18n="toggle.repeat">Repeat</div>
-          <div class="tgl" id="bAutomixBig" data-i18n="toggle.automix">Automix</div>
         </div>
 
         <div class="vol">
@@ -1122,7 +1178,6 @@ html, body {
         <div class="toggles">
           <div class="tgl" id="bShuffleRadio" data-i18n="toggle.shuffle">Shuffle</div>
           <div class="tgl" id="bRepeatRadio" data-i18n="toggle.repeat">Repeat</div>
-          <div class="tgl" id="bAutomixRadio" data-i18n="toggle.automix">Automix</div>
         </div>
 
         <div class="vol">
@@ -1146,7 +1201,7 @@ html, body {
 
     <div id="pageLibSearch" style="display:none;">
 
-      <div class="page-title" id="libSearchPageTitle">Library</div>
+      <div class="page-title" id="libSearchPageTitle">Collection</div>
 
       <div class="side-row">
 
@@ -1183,7 +1238,6 @@ html, body {
         <div class="toggles">
           <div class="tgl" id="bShuffle" data-i18n="toggle.shuffle">Shuffle</div>
           <div class="tgl" id="bRepeat" data-i18n="toggle.repeat">Repeat</div>
-          <div class="tgl" id="bAutomix" data-i18n="toggle.automix">Automix</div>
         </div>
 
         <div class="vol">
@@ -1261,6 +1315,7 @@ html, body {
     <div class="searchbar" id="queueToolbar">
       <button id="bQueueReload" style="margin-left:0" data-i18n="queue.reload">Refresh</button>
       <button id="bQueueClear" style="background:var(--surface);color:var(--text-secondary)" data-i18n="queue.clear">Clear</button>
+      <button id="bQueueRadio" class="qtoolbar-icon" title="Radio"></button>
     </div>
     <div class="list" id="queue"></div>
   </div>
@@ -1333,6 +1388,7 @@ html, body {
   </div>
 
   <footer class="footer">
+    <div class="tab" data-tab="lounge" id="footLounge"></div>
     <div class="tab" data-tab="now" id="footNow"></div>
     <div class="tab" data-tab="radio" id="footRadio"></div>
     <div class="tab" data-tab="library" id="footLibrary"></div>
@@ -1419,7 +1475,7 @@ html, body {
    pageshow for weeks - without the timer, the update check would be
    effectively dead.
    ================================================================== */
-var APP_VERSION = '2026-09-01.2';
+var APP_VERSION = '2026-10-18.1';
 var UPDATE_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 
 /* ==================================================================
@@ -1485,14 +1541,17 @@ var STRINGS = {
     "toggle.shuffle": "Shuffle",
     "toggle.repeat": "Repeat",
     "toggle.repeatOne": "Repeat one",
-    "toggle.automix": "Automix",
-    "toast.automixOn": "Automix on",
-    "toast.automixOff": "Automix off",
+    "queue.radioTagTitle": "Added by Radio",
+    "toast.radioOn": "Radio on",
+    "toast.radioOff": "Radio off",
+    "toast.radioCleanup": "Removed {count} radio track(s)",
+    "toast.radioNoSeed": "Nothing playing to start radio from",
     "vol.label": "Vol",
     "vol.groupVolumeCollapsed": "Group volume ▼",
     "vol.groupVolumeExpanded": "Group volume ▲",
     "tab.queue": "Queue",
-    "tab.library": "Library",
+    "tab.lounge": "Lounge",
+    "tab.library": "Collection",
     "tab.search": "Search",
     "search.placeholder": "Track, artist, album, playlist",
     "search.button": "Search",
@@ -1535,6 +1594,9 @@ var STRINGS = {
     "sort.relevance": "Relevance",
     "sort.name": "Name",
     "sort.year": "Year",
+    "sort.albumArtist": "Album Artist",
+    "sort.lastPlayed": "Last Played",
+    "sort.playCount": "Play Count",
     "sheet.playNow": "Play now",
     "sheet.playNext": "Play next",
     "sheet.addToQueue": "Add to queue",
@@ -1584,7 +1646,7 @@ var STRINGS = {
     "toast.playlistsLoadFailed": "Could not load playlists: {err}",
     "toast.addFailed": "Failed to add: {err}",
     "toast.playlistCreateFailed": "Could not create playlist: {err}",
-    "toast.automixFailed": "Could not set automix: {err}",
+    "toast.radioFailed": "Could not start radio: {err}",
     "toast.commandFailed": "Command failed: {err}",
     "toast.playFailed": "Playback failed: {err}",
     "toast.jumpFailed": "Jump failed: {err}",
@@ -1595,12 +1657,19 @@ var STRINGS = {
     "qa.playMusic": "Play Music",
     "qa.sleep": "Sleep",
     "qa.sleeping": "Sleeping …",
+    "lounge.recentHeading": "Recently Played",
+    "lounge.recentError": "Could not load recently played items.",
+    "lounge.recentEmpty": "Nothing played recently yet.",
+    "lounge.recommendedHeading": "Recommended",
+    "lounge.recommendedError": "Could not load recommendations.",
+    "lounge.recommendedEmpty": "No recommendations available.",
     "radio.empty": "No favorite radio stations yet.",
     "radio.otherGroup": "Other",
     "source.all": "All sources",
+    "pagetitle.lounge": "Lounge",
     "pagetitle.now": "Now Playing",
     "pagetitle.radio": "Radio",
-    "pagetitle.library": "Library",
+    "pagetitle.library": "Collection",
     "pagetitle.search": "Search",
     "settings.title": "Settings",
     "settings.defaultSource": "Default Music Source (Library & Search)",
@@ -1650,7 +1719,6 @@ function paintStaticUI() {
   applyStaticTranslations();
   buildStations();
   renderNow();
-  paintAutomix();
 }
 
 /* ---------- Dark/light mode ----------
@@ -2132,7 +2200,15 @@ function svgIcon(kind) {
      .footer .tab / .footer .tab.on text color (secondary/accent) for
      free, instead of needing separate on/off artwork like the transport
      icons above. */
-  if (kind === 'now') {
+  if (kind === 'lounge') {
+    /* Simple side-view sofa/lounge chair - backrest+armrests outline
+       over a seat cushion, standing on two short legs - for the Lounge
+       (home) tab, leftmost in the footer. */
+    p = '<path d="M6 12V8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' +
+        '<rect x="3.5" y="12" width="17" height="5.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.6"/>' +
+        '<line x1="5" y1="17.5" x2="5" y2="19.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' +
+        '<line x1="19" y1="17.5" x2="19" y2="19.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>';
+  } else if (kind === 'now') {
     p = '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/>' +
         '<path d="M10 8.3l6.2 3.7-6.2 3.7z" fill="currentColor"/>';
   } else if (kind === 'radio') {
@@ -2144,13 +2220,28 @@ function svgIcon(kind) {
         '<circle cx="16.2" cy="14.7" r="1.2" fill="currentColor"/>' +
         '<line x1="12.8" y1="17.6" x2="18.4" y2="17.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>';
   } else if (kind === 'library') {
-    p = '<rect x="4" y="6" width="3" height="14" fill="currentColor"/>' +
-        '<rect x="9.2" y="3" width="3" height="17" fill="currentColor"/>' +
-        '<rect x="14.4" y="8" width="3" height="12" fill="currentColor"/>' +
-        '<rect x="19.6" y="5.5" width="2.4" height="14.5" fill="currentColor"/>';
+    /* Three record spines standing on a shelf (a "Collection" of records,
+       rather than the generic bar-chart look the old 4-bar version had)
+       - the third leans at an angle against the other two, rotated
+       around its own base so it still touches the implied shelf line at
+       the bottom instead of just floating at a tilt. */
+    p = '<rect x="3.5" y="5" width="3.4" height="15" rx="0.6" fill="currentColor"/>' +
+        '<rect x="10" y="3" width="3.4" height="17" rx="0.6" fill="currentColor"/>' +
+        '<rect x="16.5" y="6" width="3.4" height="14" rx="0.6" fill="currentColor" transform="rotate(-14 18.2 20)"/>';
   } else if (kind === 'search') {
     p = '<circle cx="10.4" cy="10.4" r="6.4" fill="none" stroke="currentColor" stroke-width="1.7"/>' +
         '<path d="M15.2 15.2L21 21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>';
+  } else if (kind === 'radiotower') {
+    /* Broadcast tower (mast + antenna tip + a pair of signal arcs on each
+       side) for #bQueueRadio - deliberately distinct from the 'radio'
+       (radio set) icon above, since this one means "start radio mode"
+       rather than "the Radio tab". currentColor so it follows the
+       button's own text color, same as the transport icons further up. */
+    p = '<line x1="12" y1="20" x2="12" y2="6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' +
+        '<circle cx="12" cy="5" r="1.4" fill="currentColor"/>' +
+        '<path d="M8 20h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' +
+        '<path d="M8.5 10a5 5 0 0 0 0 7" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>' +
+        '<path d="M15.5 10a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>';
   } else {
     p = '';
   }
@@ -2474,7 +2565,7 @@ function selectPlayer(id, force) {
     }
     adoptQueue(activeQueue());
     renderNow();
-    loadCrossfadeState();
+    loadRadioModeState();
     if (queuePanelOpen) { loadQueue(); }
   });
 }
@@ -2587,7 +2678,7 @@ function handleEvent(msg) {
       if (msg.data.queue_id === activeQueueId) {
         adoptQueue(msg.data);
         renderNow();
-        loadCrossfadeState();
+        loadRadioModeState();
         if (queuePanelOpen) { loadQueue(); }
       }
       buildStations();
@@ -3622,62 +3713,151 @@ $('playlistSheetbg').onclick = function (e) {
 };
 
 /* ==================================================================
-   AUTOMIX / SMART CROSSFADE
+   RADIO MODE
    ==================================================================
-   Since MA server 2.10.0 (music-assistant/server#4373), crossfade is a
-   queue setting (players_queues/crossfade, the crossfade_enabled field
-   on the PlayerQueue object) instead of a player config
-   (config/players/*, smart_fades_mode). No fallback for older servers.
-   During active playback, it has to be paused briefly to enable it so
-   the audio stream picks up the new mode.
-   ================================================================== */
-var crossfadeEnabled = false;
+   MA's actual "Start Radio" feature - seeds the queue from whatever's
+   currently playing and has the server keep extending it with similar
+   tracks (q.radio_mode on the PlayerQueue object; already read
+   elsewhere for the queue.radioBanner hint). This replaced an earlier
+   "Don't Stop the Music" button (player_queues/dont_stop_the_music) -
+   that command is still used as a best-effort way to ask the server to
+   stop auto-extending when radio mode turns off (see stopRadioMode()),
+   since it's the one confirmed-working "stop continuing the queue"
+   lever available, but starting radio mode itself goes through
+   player_queues/play_media with radio_mode: true instead.
+   NOT verified against a live server from here (unlike
+   dont_stop_the_music, which was corrected once already based on a real
+   error message) - player_queues/play_media accepting a radio_mode
+   parameter is based on general familiarity with MA's API shape, not a
+   confirmed response. If the server rejects/ignores it, check the
+   actual "Start Radio" request shape a current MA release's own web UI
+   sends and adjust startRadioMode() below. */
+var radioModeOn = false;
+/* Snapshot of queue_item_ids present the moment radio mode last turned
+   on - see cleanupRadioAdditions() for how it's used, and queueRow()
+   for how the same snapshot drives the small radio-tag icon on rows
+   added since. null when radio mode is off (or the baseline hasn't been
+   captured yet). */
+var radioBaselineIds = null;
 
-function paintAutomix() {
-  npClass('bAutomix', 'tgl' + (crossfadeEnabled ? ' on' : ''));
+function paintRadioButton() {
+  var btn = $('bQueueRadio');
+  if (btn) { btn.className = 'qtoolbar-icon' + (radioModeOn ? ' on' : ''); }
 }
 
-function loadCrossfadeState() {
+function loadRadioModeState() {
   var q = activeQueue();
-  crossfadeEnabled = !!(q && q.crossfade_enabled);
-  paintAutomix();
+  var next = !!(q && q.radio_mode);
+  if (next && !radioModeOn) { snapshotRadioBaseline(); }
+  else if (!next && radioModeOn) { cleanupRadioAdditions(); }
+  radioModeOn = next;
+  paintRadioButton();
 }
 
-function toggleAutomix() {
-  if (!activeId) { toast(t('common.noPlayerSelected'), true); return; }
-
-  var wasPlaying = isPlaying;
-  var nextState = !crossfadeEnabled;
-
-  function setAndResume() {
-    send('player_queues/crossfade', { queue_id: activeQueueId, crossfade_enabled: nextState }, function (err) {
-      if (err) {
-        toast(t('toast.automixFailed', { err: err }), true);
-        if (wasPlaying) { cmd('players/cmd/play_pause', { player_id: activeId }); }
-        return;
-      }
-      crossfadeEnabled = nextState;
-      paintAutomix();
-      if (wasPlaying) {
-        setTimeout(function () {
-          cmd('players/cmd/play_pause', { player_id: activeId });
-        }, 300);
-      } else {
-        toast(nextState ? t('toast.automixOn') : t('toast.automixOff'));
-      }
-    });
+/* The currently playing track's own URI - the seed radio mode starts
+   from. Prefers the queue's current_item (has the resolved media_item),
+   falls back to the player's raw current_media for sources without a
+   queue-tracked item (e.g. a foreign AirPlay/Spotify Connect stream). */
+function radioSeedUri() {
+  var q = activeQueue();
+  if (q && q.current_item && q.current_item.media_item && q.current_item.media_item.uri) {
+    return q.current_item.media_item.uri;
   }
-
-  if (wasPlaying) {
-    cmd('players/cmd/play_pause', { player_id: activeId }, function () {
-      setTimeout(setAndResume, 300);
-    });
-  } else {
-    setAndResume();
-  }
+  var p = activePlayer();
+  if (p && p.current_media && p.current_media.uri) { return p.current_media.uri; }
+  return null;
 }
 
-npOn('bAutomix', 'onclick', toggleAutomix);
+function toggleRadioMode() {
+  if (radioModeOn) { stopRadioMode(); } else { startRadioMode(); }
+}
+
+/* Deliberately option: 'replace' - matches how "Start Radio" works
+   elsewhere (Spotify, MA's own web UI): the seed track becomes track 1
+   of a fresh, continuously-extending queue, rather than being appended
+   after whatever was already queued. The seed briefly restarts as a
+   result - an accepted, expected side effect of "start radio here". */
+function startRadioMode() {
+  if (!activeQueueId) { toast(t('common.noPlayerSelected'), true); return; }
+  var uri = radioSeedUri();
+  if (!uri) { toast(t('toast.radioNoSeed'), true); return; }
+  var qid = activeQueueId;
+  send('player_queues/play_media', { queue_id: qid, media: uri, option: 'replace', radio_mode: true }, function (err) {
+    if (err) { toast(t('toast.radioFailed', { err: err }), true); return; }
+    if (queues[qid]) { queues[qid].radio_mode = true; }
+    loadRadioModeState();
+    toast(t('toast.radioOn'));
+    if (queuePanelOpen) { loadQueue(); }
+  });
+}
+
+function stopRadioMode() {
+  var qid = activeQueueId;
+  if (!qid) { return; }
+  /* Best-effort only - see the section comment above. Fired and
+     forgotten: cleanup below runs regardless of whether the server
+     actually honors this. */
+  send('player_queues/dont_stop_the_music', { queue_id: qid, dont_stop_the_music_enabled: false }, function () {});
+  if (queues[qid]) { queues[qid].radio_mode = false; }
+  loadRadioModeState();
+  toast(t('toast.radioOff'));
+}
+
+$('bQueueRadio').innerHTML = svgIcon('radiotower');
+$('bQueueRadio').onclick = toggleRadioMode;
+
+function snapshotRadioBaseline() {
+  var qid = activeQueueId;
+  if (!qid) { radioBaselineIds = null; return; }
+  send('player_queues/items', { queue_id: qid, limit: 500 }, function (err, items) {
+    if (qid !== activeQueueId || err || !items) { return; }
+    var ids = {};
+    for (var i = 0; i < items.length; i++) { ids[items[i].queue_item_id] = true; }
+    radioBaselineIds = ids;
+    if (queuePanelOpen) { loadQueue(); }   /* so the new radio-tag icons show up right away */
+  });
+}
+
+/* Removes queue items that showed up after radio mode turned on and
+   haven't played yet - MA doesn't expose an "added by radio mode" flag
+   on individual queue items, so this is a best-effort heuristic:
+   anything not in the baseline snapshot taken when it turned on, and not
+   yet played (i.e. sitting after the current item), is assumed to be one
+   of its automatic additions - the same items queueRow() tags with the
+   small radio icon while radio mode is on. A track the user manually
+   queues while radio mode is still on would get swept up the same way -
+   an accepted limitation given there's no real per-item source flag to
+   tell the two apart from the client. Never touches the currently
+   playing item or anything already played (before it in the list). */
+function cleanupRadioAdditions() {
+  var qid = activeQueueId;
+  var baseline = radioBaselineIds;
+  radioBaselineIds = null;
+  if (!qid || !baseline) { return; }
+  send('player_queues/items', { queue_id: qid, limit: 500 }, function (err, items) {
+    if (qid !== activeQueueId || err || !items) { return; }
+    var q = queues[qid];
+    var curId = q && q.current_item ? q.current_item.queue_item_id : null;
+    var pastCur = false;
+    var toRemove = [];
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      if (it.queue_item_id === curId) { pastCur = true; continue; }
+      if (pastCur && !baseline[it.queue_item_id]) { toRemove.push(it.queue_item_id); }
+    }
+    if (!toRemove.length) { return; }
+    var remaining = toRemove.length;
+    for (var j = 0; j < toRemove.length; j++) {
+      send('player_queues/delete_item', { queue_id: qid, item_id_or_index: toRemove[j] }, function () {
+        remaining--;
+        if (remaining === 0) {
+          if (queuePanelOpen) { loadQueue(); }
+          toast(t('toast.radioCleanup', { count: toRemove.length }));
+        }
+      });
+    }
+  });
+}
 
 /* ==================================================================
    TRANSPORT
@@ -4203,18 +4383,49 @@ function openPodcast(pc) {
 function albumOf(tr) { return (tr.album && tr.album.name) || ''; }
 function yearOf(a) { return a.year ? String(a.year) : ''; }
 
-function sortMediaItems(items, mode) {
+/* The album's own credited artist, which can differ from a track's own
+   artist(s) (compilations, features) - falls back to the item's own
+   artist when there's no nested .album (the item IS an album, or some
+   other type without one), so "sort by album artist" still does
+   something reasonable there instead of sorting everything as "". */
+function albumArtistOf(it) {
+  if (!it) { return ''; }
+  var al = it.album;
+  if (al) {
+    if (al.artists && al.artists.length) { return al.artists[0].name || String(al.artists[0]); }
+    if (al.artist) { return al.artist.name || String(al.artist); }
+  }
+  return artistsOf(it);
+}
+
+/* dir: 1 (default) keeps each mode's own natural order (name A-Z, year/
+   lastPlayed/playCount newest-or-most first); -1 reverses whichever of
+   those is currently active - see the direction-toggle chip in
+   buildLibFilters(). last_played/play_count are MA library-row stats
+   (same "present on every item in practice, 0 if a provider ever omits
+   it" assumption as timestamp_added elsewhere in this file). */
+function sortMediaItems(items, mode, dir) {
+  var mul = (dir === -1) ? -1 : 1;
   if (mode === 'name') {
     items.sort(function (a, b) {
       var an = (a.name || '').toLowerCase(), bn = (b.name || '').toLowerCase();
-      return an < bn ? -1 : (an > bn ? 1 : 0);
+      return mul * (an < bn ? -1 : (an > bn ? 1 : 0));
     });
   } else if (mode === 'year') {
     items.sort(function (a, b) {
       var ay = a.year || (a.album && a.album.year) || 0;
       var by = b.year || (b.album && b.album.year) || 0;
-      return by - ay;
+      return mul * (by - ay);
     });
+  } else if (mode === 'albumArtist') {
+    items.sort(function (a, b) {
+      var an = albumArtistOf(a).toLowerCase(), bn = albumArtistOf(b).toLowerCase();
+      return mul * (an < bn ? -1 : (an > bn ? 1 : 0));
+    });
+  } else if (mode === 'lastPlayed') {
+    items.sort(function (a, b) { return mul * ((b.last_played || 0) - (a.last_played || 0)); });
+  } else if (mode === 'playCount') {
+    items.sort(function (a, b) { return mul * ((b.play_count || 0) - (a.play_count || 0)); });
   }
   return items;
 }
@@ -4542,7 +4753,22 @@ var SORT_MODES = [
   { k: 'name', lKey: 'sort.name' },
   { k: 'year', lKey: 'sort.year' }
 ];
+/* Library-only sort options - separate from SORT_MODES (shared with the
+   artist-detail "Titel"/"Alben" tabs, see renderTabs()) since last-
+   played/play-count/album-artist are library-wide concepts that don't
+   fit a single artist's own track/album lists as well. */
+var LIB_SORT_MODES = [
+  { k: 'name',        lKey: 'sort.name' },
+  { k: 'year',        lKey: 'sort.year' },
+  { k: 'albumArtist', lKey: 'sort.albumArtist' },
+  { k: 'lastPlayed',  lKey: 'sort.lastPlayed' },
+  { k: 'playCount',   lKey: 'sort.playCount' }
+];
 var libSortMode = 'name';
+/* 1 = each mode's own natural default order, -1 = reversed - see
+   sortMediaItems()'s dir param. Persists across sort-mode changes
+   (toggling it doesn't reset when you pick a different mode). */
+var libSortDir = 1;
 
 function buildLibFilters() {
   var box = $('libFilters');
@@ -4577,7 +4803,7 @@ function buildLibFilters() {
 
   var sortBox = $('libSortFilters');
   sortBox.innerHTML = '';
-  for (var j = 0; j < SORT_MODES.length; j++) {
+  for (var j = 0; j < LIB_SORT_MODES.length; j++) {
     (function (s) {
       var el = document.createElement('div');
       el.className = 'filt' + (s.k === libSortMode ? ' on' : '');
@@ -4588,8 +4814,21 @@ function buildLibFilters() {
         loadLibrary(currentLibType);
       };
       sortBox.appendChild(el);
-    })(SORT_MODES[j]);
+    })(LIB_SORT_MODES[j]);
   }
+
+  /* Direction toggle - reverses whichever sort mode above is active
+     (sortMediaItems()'s dir param) rather than being a mode of its own,
+     so it stays a single chip regardless of how many modes exist. */
+  var dirEl = document.createElement('div');
+  dirEl.className = 'filt dir';
+  setText(dirEl, libSortDir === -1 ? '↑' : '↓');
+  dirEl.onclick = function () {
+    libSortDir = (libSortDir === -1) ? 1 : -1;
+    buildLibFilters();
+    loadLibrary(currentLibType);
+  };
+  sortBox.appendChild(dirEl);
 }
 
 function loadLibrary(typeKey) {
@@ -4617,7 +4856,7 @@ function loadLibrary(typeKey) {
       for (var f = 0; f < items.length; f++) { if (items[f].favorite) { filtered.push(items[f]); } }
       items = filtered;
     }
-    sortMediaItems(items, libSortMode);
+    sortMediaItems(items, libSortMode, libSortDir);
     if (librarySourceFilter !== 'all') {
       var srcFiltered = [];
       for (var s = 0; s < items.length; s++) {
@@ -4754,6 +4993,7 @@ var currentTab = 'now';
 var navOriginTab = null;
 
 var TABS = {
+  lounge:  { pane: 'pageLounge',    init: loadLoungePage },
   now:     { pane: 'pageNow',       init: null },
   radio:   { pane: 'pageRadio',     init: loadRadioGrid },
   library: { pane: 'pageLibSearch', init: function () { showLibSearchSide('library'); buildLibFilters(); loadLibrary(currentLibType); } },
@@ -4811,6 +5051,7 @@ function enterDetail() {
   }
 })();
 
+$('footLounge').innerHTML = svgIcon('lounge');
 $('footNow').innerHTML = svgIcon('now');
 $('footRadio').innerHTML = svgIcon('radio');
 $('footLibrary').innerHTML = svgIcon('library');
@@ -5014,6 +5255,17 @@ function queueRow(qi, index, isCurrent, isPlayed) {
   var n = document.createElement('div');
   n.className = 'n';
   setText(n, qi.name || mi.name || '—');
+  /* Small radio-tower tag for tracks added by radio mode - same baseline-
+     snapshot heuristic cleanupRadioAdditions() uses to know what to
+     remove when radio mode turns off (see "RADIO MODE"), just also
+     rendered here for visibility while radio mode is still on. */
+  if (radioModeOn && radioBaselineIds && !radioBaselineIds[qi.queue_item_id]) {
+    var radioTag = document.createElement('span');
+    radioTag.className = 'q-radio-tag';
+    radioTag.title = t('queue.radioTagTitle');
+    radioTag.innerHTML = svgIcon('radiotower');
+    n.appendChild(radioTag);
+  }
   var s = document.createElement('div');
   s.className = 's';
   setText(s, artistsOf(mi) || albumOf(mi));
@@ -5281,18 +5533,19 @@ function fadeVolume(ids, target, durationMs, cb) {
 /* Play Music: resumes the active player (MA has no separate "play last
    track" command - the queue already sits at its last position after a
    pause/stop, so resuming is the closest available primitive) and fades
-   its volume up to 50% over 3s. */
-$('qaPlayMusic').onclick = function () {
-  closeStationMenu();
+   its volume up to 50% over 3s. Shared by the #stationMenu dropdown's
+   Quick Actions (#qaPlayMusic/#qaSleep) and the identical pair on the
+   Lounge home page (#qaPlayMusicLounge/#qaSleepLounge, see "LOUNGE"
+   further down) - same action, just reachable from two places. */
+function doPlayMusic() {
   if (!activeId) { toast(t('common.noPlayerSelected'), true); return; }
   if (!isPlayerPlaying(activeId)) { cmd('players/cmd/play_pause', { player_id: activeId }); }
   fadeVolume([activeId], 50, 3000);
-};
+}
 
 /* Sleep: fades every known player down to 0% over 5s, then pauses
    whichever of them were actually playing. */
-$('qaSleep').onclick = function () {
-  closeStationMenu();
+function doSleep() {
   toast(t('qa.sleeping'));
   var ids = playerIds.slice();
   fadeVolume(ids, 0, 5000, function () {
@@ -5300,7 +5553,12 @@ $('qaSleep').onclick = function () {
       if (isPlayerPlaying(ids[i])) { cmd('players/cmd/play_pause', { player_id: ids[i] }); }
     }
   });
-};
+}
+
+$('qaPlayMusic').onclick = function () { closeStationMenu(); doPlayMusic(); };
+$('qaSleep').onclick = function () { closeStationMenu(); doSleep(); };
+$('qaPlayMusicLounge').onclick = doPlayMusic;
+$('qaSleepLounge').onclick = doSleep;
 
 document.addEventListener('click', function (e) {
   if (!stationMenuOpen && !groupMenuOpen && !accentMenuOpen && !settingsMenuOpen) { return; }
@@ -5319,6 +5577,216 @@ document.addEventListener('click', function (e) {
   settingsMenuOpen = false;
   $('settingsMenu').style.display = 'none';
 }, false);
+
+/* ==================================================================
+   LOUNGE (home page)
+   ==================================================================
+   #pageLounge, the leftmost footer tab - a "home" page combining the
+   Quick Actions buttons (also reachable from the #stationMenu dropdown,
+   see doPlayMusic()/doSleep() above) with two best-effort "what to play"
+   sections. */
+var LOUNGE_RECENT_TYPES = ['track', 'album', 'artist', 'playlist'];
+var LOUNGE_RECENT_LIMIT = 10;   /* per provider group, after merging */
+
+/* Best-effort name-based filter for provider-generated "radio"/"mix"
+   style playlist shells (Spotify's Daily Mix/Discover Weekly, similar
+   auto-generated playlists other providers surface) - MA doesn't expose
+   a reliable "this is a generated shell, not a real playlist" flag this
+   project has found, so this matches common naming patterns instead.
+   Expect to extend the keyword list once it's clear what an actual
+   provider combination actually returns. */
+var GENERIC_PLAYLIST_KEYWORDS = [
+  'daily mix', 'discover weekly', 'release radar', 'on repeat', 'repeat rewind',
+  'made for you', 'my mix', 'smart shuffle', 'autoplay', 'top songs', 'wrapped'
+];
+function isGenericGeneratedPlaylist(it) {
+  if (!it || it.media_type !== 'playlist') { return false; }
+  var name = (it.name || '').toLowerCase();
+  for (var i = 0; i < GENERIC_PLAYLIST_KEYWORDS.length; i++) {
+    if (name.indexOf(GENERIC_PLAYLIST_KEYWORDS[i]) >= 0) { return true; }
+  }
+  if (/\bradio$/.test(name)) { return true; }   /* "<Artist/Track> Radio" seeded-radio shells */
+  return false;
+}
+function isGenericFolderName(name) {
+  if (!name) { return false; }
+  var n = name.toLowerCase();
+  for (var i = 0; i < GENERIC_PLAYLIST_KEYWORDS.length; i++) {
+    if (n.indexOf(GENERIC_PLAYLIST_KEYWORDS[i]) >= 0) { return true; }
+  }
+  return false;
+}
+
+function loadLoungePage() {
+  loadLoungeRecent();
+  loadLoungeRecommendations();
+}
+
+/* "Recently played", grouped by provider - deliberately built from the
+   same already-proven music/<type>s/library_items commands LIB_TYPES
+   already uses (not a new/unverified command), filtered to items that
+   carry a last_played timestamp and sorted by it. last_played is the
+   same MA library-row field already relied on for the Collection page's
+   "Last Played" sort mode (see "Sorting") - present on every item in
+   practice, 0/skipped otherwise rather than erroring. */
+function loadLoungeRecent() {
+  var box = $('loungeRecent');
+  box.innerHTML = '';
+  var heading = document.createElement('div');
+  heading.className = 'menu-head';
+  setText(heading, t('lounge.recentHeading'));
+  box.appendChild(heading);
+  var hint = document.createElement('div');
+  hint.className = 'hint';
+  setText(hint, t('common.loading'));
+  box.appendChild(hint);
+
+  var remaining = LOUNGE_RECENT_TYPES.length;
+  var merged = [];
+  var failCount = 0;
+  for (var i = 0; i < LOUNGE_RECENT_TYPES.length; i++) {
+    (function (type) {
+      var def = null;
+      for (var j = 0; j < LIB_TYPES.length; j++) { if (LIB_TYPES[j].type === type) { def = LIB_TYPES[j]; break; } }
+      if (!def) { remaining--; return; }
+      send(def.cmd, { limit: CFG.LIST_LIMIT, offset: 0 }, function (err, items) {
+        remaining--;
+        if (err) { failCount++; }
+        else if (items) {
+          for (var k = 0; k < items.length; k++) {
+            if (items[k].last_played) { merged.push({ it: items[k], type: type }); }
+          }
+        }
+        if (remaining === 0) { renderLoungeRecent(merged, failCount === LOUNGE_RECENT_TYPES.length); }
+      });
+    })(LOUNGE_RECENT_TYPES[i]);
+  }
+}
+
+function renderLoungeRecent(merged, allFailed) {
+  var box = $('loungeRecent');
+  box.innerHTML = '';
+  var heading = document.createElement('div');
+  heading.className = 'menu-head';
+  setText(heading, t('lounge.recentHeading'));
+  box.appendChild(heading);
+
+  if (allFailed) {
+    var errHint = document.createElement('div');
+    errHint.className = 'hint';
+    setText(errHint, t('lounge.recentError'));
+    box.appendChild(errHint);
+    return;
+  }
+
+  var kept = [];
+  for (var i = 0; i < merged.length; i++) {
+    if (!isGenericGeneratedPlaylist(merged[i].it)) { kept.push(merged[i]); }
+  }
+  if (!kept.length) {
+    var emptyHint = document.createElement('div');
+    emptyHint.className = 'hint';
+    setText(emptyHint, t('lounge.recentEmpty'));
+    box.appendChild(emptyHint);
+    return;
+  }
+
+  var groups = {};
+  var domains = [];
+  for (var j = 0; j < kept.length; j++) {
+    var entry = kept[j];
+    var pds = itemProviderDomains(entry.it);
+    var domain = pds.length ? pds[0] : 'library';
+    if (!groups[domain]) { groups[domain] = []; domains.push(domain); }
+    groups[domain].push(entry);
+  }
+  domains.sort(function (a, b) {
+    var la = sourceLabel(a), lb = sourceLabel(b);
+    return la < lb ? -1 : (la > lb ? 1 : 0);
+  });
+
+  for (var g = 0; g < domains.length; g++) {
+    var list = groups[domains[g]];
+    list.sort(function (a, b) { return (b.it.last_played || 0) - (a.it.last_played || 0); });
+    if (list.length > LOUNGE_RECENT_LIMIT) { list.length = LOUNGE_RECENT_LIMIT; }
+
+    var sec = document.createElement('div');
+    sec.className = 'lounge-section';
+    var subHead = document.createElement('div');
+    subHead.className = 'pl-sec';
+    setText(subHead, sourceLabel(domains[g]));
+    sec.appendChild(subHead);
+    var listBox = document.createElement('div');
+    listBox.className = 'list';
+    for (var k = 0; k < list.length; k++) { listBox.appendChild(mediaRow(list[k].it, list[k].type, {})); }
+    sec.appendChild(listBox);
+    box.appendChild(sec);
+  }
+}
+
+/* MA's own cross-provider recommendation engine - NOT verified against
+   a live server from here: music/recommendations is a plausible command
+   name given this project's other music/* commands, but the exact
+   command and its response shape (a flat item list? folders grouped by
+   provider? something else?) haven't been confirmed. Parsed
+   defensively below - if the server rejects the command or the shape
+   doesn't match, this section shows a quiet error hint instead of
+   breaking the rest of the Lounge page. Check the actual command/
+   response shape a current MA release's own web UI uses and adjust
+   loadLoungeRecommendations()/renderLoungeRecommendations() if wrong. */
+function loadLoungeRecommendations() {
+  var box = $('loungeRecommended');
+  box.innerHTML = '<div class="hint">' + t('common.loading') + '</div>';
+  send('music/recommendations', {}, function (err, result) {
+    if (err || !result) {
+      box.innerHTML = '<div class="hint">' + t('lounge.recommendedError') + '</div>';
+      return;
+    }
+    renderLoungeRecommendations(result);
+  });
+}
+
+function renderLoungeRecommendations(result) {
+  var box = $('loungeRecommended');
+  box.innerHTML = '';
+
+  /* An array of folder-like objects (each carrying its own .items) is
+     rendered as one section per folder; a flat array of media items is
+     rendered as a single "Recommended" section instead. */
+  var folders;
+  if (result.length && result[0] && result[0].items) { folders = result; }
+  else if (result.length) { folders = [{ name: t('lounge.recommendedHeading'), items: result }]; }
+  else { folders = []; }
+
+  var any = false;
+  for (var i = 0; i < folders.length; i++) {
+    var folder = folders[i];
+    if (!folder || !folder.items || !folder.items.length) { continue; }
+    if (isGenericFolderName(folder.name)) { continue; }
+
+    var items = [];
+    for (var j = 0; j < folder.items.length; j++) {
+      if (!isGenericGeneratedPlaylist(folder.items[j])) { items.push(folder.items[j]); }
+    }
+    if (!items.length) { continue; }
+
+    var sec = document.createElement('div');
+    sec.className = 'lounge-section';
+    var head = document.createElement('div');
+    head.className = 'menu-head';
+    setText(head, folder.name || sourceLabel(folder.provider_domain || 'library') || t('lounge.recommendedHeading'));
+    sec.appendChild(head);
+    var listBox = document.createElement('div');
+    listBox.className = 'list';
+    for (var k = 0; k < items.length; k++) { listBox.appendChild(mediaRow(items[k], items[k].media_type, {})); }
+    sec.appendChild(listBox);
+    box.appendChild(sec);
+    any = true;
+  }
+  if (!any) {
+    box.innerHTML = '<div class="hint">' + t('lounge.recommendedEmpty') + '</div>';
+  }
+}
 
 /* ==================================================================
    START
