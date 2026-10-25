@@ -350,8 +350,20 @@ html, body {
 #pageNow .sub.album { text-align: center; }
 
 /* ---------- Lounge (home page: quick actions + recommendations) ---------- */
+/* min-width: 0 is critical here, the same way .pages/.right already
+   need it (see their own comments): #pageLounge is a flex item of
+   .pages (a row flex container), and a flex item's default min-width
+   is "auto" - i.e. "never shrink narrower than my content's intrinsic
+   width". Without this override, a wide .rack-scroll row (see below)
+   never actually overflows ITS OWN box: #pageLounge instead grows to
+   match the rack's full un-scrolled width, and since html/body carry
+   overflow: hidden, that excess width gets silently clipped at the top
+   of the page instead of becoming scrollable anywhere - the rack's own
+   overflow-x: auto never has anything to trigger on. This was the real
+   cause of "no side scrolling at all" on both desktop and iPad: it's a
+   pure layout bug, not a touch/wheel/drag event-handling one. */
 #pageLounge {
-  -webkit-flex: 1; flex: 1; min-height: 0;
+  -webkit-flex: 1; flex: 1; min-height: 0; min-width: 0;
   display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column;
 }
 .lounge-body { -webkit-flex: 1; flex: 1; min-height: 0; padding: 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; position: relative; }
@@ -1076,6 +1088,7 @@ html, body {
     <div class="brand">Lounge Music</div>
     <div class="stations" id="stations"></div>
     <div class="station-more" id="stationMore">Quick Actions&nbsp;&#10095;</div>
+    <div class="station-more" id="headerRefresh">Refresh&nbsp;&#8635;</div>
     <div class="theme-switch" id="themeSwitch"></div>
     <div class="accent-switch" id="accentSwitch"></div>
     <div class="settings-switch" id="settingsSwitch">&#9881;</div>
@@ -1124,6 +1137,7 @@ html, body {
       <div class="page-title" data-i18n="pagetitle.lounge">Lounge</div>
       <div class="lounge-body" id="loungeBody">
         <div id="loungePullHint" class="lounge-pull-hint"></div>
+        <div class="lounge-section" id="loungeQuickAccess"></div>
         <div class="lounge-section lounge-qa-section">
           <div class="menu-head" data-i18n="top.quickActions">Quick Actions</div>
           <div class="qa-row">
@@ -1525,7 +1539,7 @@ html, body {
    pageshow for weeks - without the timer, the update check would be
    effectively dead.
    ================================================================== */
-var APP_VERSION = '2026-10-19.4';
+var APP_VERSION = '2026-10-25.1';
 var UPDATE_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 
 /* ==================================================================
@@ -1696,6 +1710,8 @@ var STRINGS = {
     "toast.sendFailed": "Send failed",
     "toast.errorCode": "Error {code}",
     "toast.playersUnavailable": "Players unavailable: {err}",
+    "refresh.refreshing": "Refreshing…",
+    "refresh.refreshed": "Up to date.",
     "toast.favFailed": "Favorite failed: {err}",
     "toast.playlistsLoadFailed": "Could not load playlists: {err}",
     "toast.addFailed": "Failed to add: {err}",
@@ -1711,6 +1727,8 @@ var STRINGS = {
     "qa.playMusic": "Play Music",
     "qa.sleep": "Sleep",
     "qa.sleeping": "Sleeping …",
+    "lounge.quickAccessHeading": "Recently Played (All)",
+    "lounge.quickAccessEmpty": "Nothing played yet.",
     "lounge.recentHeading": "Recently Played",
     "lounge.recentError": "Could not load recently played items.",
     "lounge.recentEmpty": "Nothing played recently yet.",
@@ -2578,10 +2596,13 @@ function pickDefaultPlayer() {
   return playerIds[0] || null;
 }
 
-function bootstrap() {
-  refreshAvailableSources(); /* independent of players/queues - fires in parallel */
+/* Shared by bootstrap() (first connect) and refreshAllData() (the
+   header #headerRefresh button) - the exact same players/all +
+   player_queues/all reload, just with `cb` as an extra hook for the
+   latter to chain a page-data refresh and a toast onto. */
+function loadPlayersAndQueues(cb) {
   send('players/all', null, function (err, list) {
-    if (err) { toast(t('toast.playersUnavailable', { err: err }), true); return; }
+    if (err) { toast(t('toast.playersUnavailable', { err: err }), true); if (cb) { cb(err); } return; }
     players = {};
     for (var i = 0; i < list.length; i++) {
       if (list[i] && list[i].player_id) { players[list[i].player_id] = list[i]; }
@@ -2599,8 +2620,41 @@ function bootstrap() {
         }
       }
       selectPlayer(activeId, true);
+      if (cb) { cb(null); }
     });
   });
+}
+
+function bootstrap() {
+  refreshAvailableSources(); /* independent of players/queues - fires in parallel */
+  loadPlayersAndQueues();
+}
+
+/* Header "Refresh" button (#headerRefresh, next to Quick Actions) -
+   re-polls players/queues/providers exactly like bootstrap() does on
+   first connect, plus whichever page is actually visible
+   (refreshCurrentPageData()), so a stale view (an iPad that's been
+   sitting idle, a server restart, library changes made from another
+   client) can be brought back up to date without reloading the whole
+   page. Deliberately reuses the same already-proven commands rather
+   than anything new - re-querying them on demand is a normal, low-cost
+   operation (see "Pull-to-refresh" on the Lounge page for the same
+   reasoning), just triggered for the whole app instead of one page. */
+function refreshAllData() {
+  toast(t('refresh.refreshing'));
+  refreshAvailableSources();
+  loadPlayersAndQueues(function (err) {
+    if (err) { return; }
+    refreshCurrentPageData();
+    toast(t('refresh.refreshed'));
+  });
+}
+
+function refreshCurrentPageData() {
+  if (currentTab === 'lounge') { refreshLoungeData(); }
+  else if (currentTab === 'radio') { loadRadioGrid(); }
+  else if (currentTab === 'library') { loadLibrary(currentLibType); }
+  else if (currentTab === 'search' && $('q').value) { doSearch(); }
 }
 
 function rebuildPlayerOrder() {
@@ -2759,6 +2813,7 @@ function handleEvent(msg) {
                ($('volMembersBig').style.display === 'block' && $('mvolBig_' + pid))) { renderVolumeMembers(); }
       buildStations();
       if (groupMenuOpen) { renderGroupMenu(); positionGroupMenu(activeChipEl()); }
+      if (pid === activeId) { checkGentlyPlayWatchers(); }
     }
     return;
   }
@@ -2775,6 +2830,7 @@ function handleEvent(msg) {
         renderNow();
         loadRadioModeState();
         if (queuePanelOpen) { loadQueue(); }
+        checkGentlyPlayWatchers();
       }
       buildStations();
     }
@@ -3050,6 +3106,7 @@ function renderNow() {
     paintNowHeart();
     refreshNowFav();
     recordRecentlyPlayed(mi, media, uri, pic);
+    recordPlayStat(uri);
   }
 
   /* Add-to-playlist button */
@@ -4495,12 +4552,40 @@ function albumArtistOf(it) {
   return artistsOf(it);
 }
 
+/* Sort value for "Year" - deliberately NOT the same concept for every
+   media type, per how each one actually has (or doesn't have) a
+   release date: an album's own release year, a track's release year
+   (its own if present, else its album's - tracks from library_items
+   often only carry a lightweight .album reference without .year of
+   its own), or - since a playlist was never "released" in the first
+   place - the date it was *created*, i.e. the same timestamp_added
+   library-row stat "Recently Added" already uses elsewhere in this
+   app. Also tries metadata.release_date (a date string some providers
+   populate even when the plain .year field is empty) before giving up
+   and returning 0. Other media types (artist/radio/podcast/audiobook)
+   fall back to whatever .year happens to be present, same as before -
+   "year" isn't a very meaningful concept for them either way. */
+function yearSortValue(it) {
+  if (!it) { return 0; }
+  if (it.media_type === 'playlist') { return it.timestamp_added || 0; }
+  if (it.year) { return it.year; }
+  if (it.album && it.album.year) { return it.album.year; }
+  var rd = (it.metadata && it.metadata.release_date) || (it.album && it.album.metadata && it.album.metadata.release_date);
+  if (rd) {
+    var parsed = Date.parse(rd);
+    if (!isNaN(parsed)) { return new Date(parsed).getFullYear(); }
+  }
+  return 0;
+}
+
 /* dir: 1 (default) keeps each mode's own natural order (name A-Z, year/
    lastPlayed/playCount newest-or-most first); -1 reverses whichever of
    those is currently active - see the direction-toggle chip in
-   buildLibFilters(). last_played/play_count are MA library-row stats
-   (same "present on every item in practice, 0 if a provider ever omits
-   it" assumption as timestamp_added elsewhere in this file). */
+   buildLibFilters(). lastPlayed/playCount read through lastPlayedOf()/
+   playCountOf() (see the client-side "play statistics" section further
+   down) rather than a raw it.last_played/it.play_count field - those
+   turned out to not actually be populated by music/<type>s/library_items
+   in practice, so sorting by either used to be a silent no-op. */
 function sortMediaItems(items, mode, dir) {
   var mul = (dir === -1) ? -1 : 1;
   if (mode === 'name') {
@@ -4509,20 +4594,16 @@ function sortMediaItems(items, mode, dir) {
       return mul * (an < bn ? -1 : (an > bn ? 1 : 0));
     });
   } else if (mode === 'year') {
-    items.sort(function (a, b) {
-      var ay = a.year || (a.album && a.album.year) || 0;
-      var by = b.year || (b.album && b.album.year) || 0;
-      return mul * (by - ay);
-    });
+    items.sort(function (a, b) { return mul * (yearSortValue(b) - yearSortValue(a)); });
   } else if (mode === 'albumArtist') {
     items.sort(function (a, b) {
       var an = albumArtistOf(a).toLowerCase(), bn = albumArtistOf(b).toLowerCase();
       return mul * (an < bn ? -1 : (an > bn ? 1 : 0));
     });
   } else if (mode === 'lastPlayed') {
-    items.sort(function (a, b) { return mul * ((b.last_played || 0) - (a.last_played || 0)); });
+    items.sort(function (a, b) { return mul * (lastPlayedOf(b) - lastPlayedOf(a)); });
   } else if (mode === 'playCount') {
-    items.sort(function (a, b) { return mul * ((b.play_count || 0) - (a.play_count || 0)); });
+    items.sort(function (a, b) { return mul * (playCountOf(b) - playCountOf(a)); });
   }
   return items;
 }
@@ -4719,10 +4800,16 @@ $('aNow').onclick  = function () { playPending('replace'); };
 /* Softer variant of "Play now": fades the active player down to 0 over
    3s, swaps the queue, then fades back up to whatever volume it was at
    before the fade - reuses fadeVolume() (see QUICK ACTIONS) and
-   buildPlayPendingArgs() rather than duplicating either. */
+   buildPlayPendingArgs() rather than duplicating either. The fade-up
+   waits for waitForPlaybackSwitch() to confirm the new track is
+   actually playing (see its comment, right after fadeVolume() under
+   QUICK ACTIONS) rather than firing right after play_media is merely
+   accepted - otherwise the volume could start climbing again while the
+   previous track was still audibly fading out/stopping on the player. */
 $('aGently').onclick = function () {
   var built = buildPlayPendingArgs('replace');
   if (!built || !activeId) { return; }
+  var targetUri = built.args.start_item || built.args.media;
   var p = activePlayer() || {};
   var startVol = (p.volume_level === null || p.volume_level === undefined) ? p.group_volume : p.volume_level;
   if (startVol === null || startVol === undefined) { startVol = 50; }
@@ -4732,7 +4819,7 @@ $('aGently').onclick = function () {
     send('player_queues/play_media', built.args, function (err) {
       if (err) { toast(t('toast.playFailed', { err: err }), true); fadeVolume([fadeId], startVol, 3000); return; }
       toast(t('queue.playingLabel', { label: built.label }));
-      fadeVolume([fadeId], startVol, 3000);
+      waitForPlaybackSwitch(targetUri, GENTLE_FADE_UP_TIMEOUT_MS, function () { fadeVolume([fadeId], startVol, 3000); });
     });
   });
 };
@@ -5458,10 +5545,14 @@ $('qiNow').onclick = function () {
 
 /* Same fade-out/jump/fade-in shape as the regular sheet's "Gently play
    now" (see buildPlayPendingArgs()'s sibling above) - just play_index
-   instead of play_media, since the track is already queued. */
+   instead of play_media, since the track is already queued. Also
+   shares the same waitForPlaybackSwitch()-gated fade-up (see the
+   comment on #aGently) rather than firing right after play_index is
+   accepted. */
 $('qiGently').onclick = function () {
   if (!pendingQueueItem || !activeId) { return; }
   var qi = pendingQueueItem.qi;
+  var targetUri = pendingQueueItem.mi && pendingQueueItem.mi.uri;
   var p = activePlayer() || {};
   var startVol = (p.volume_level === null || p.volume_level === undefined) ? p.group_volume : p.volume_level;
   if (startVol === null || startVol === undefined) { startVol = 50; }
@@ -5471,7 +5562,7 @@ $('qiGently').onclick = function () {
     send('player_queues/play_index', { queue_id: activeQueueId, index: qi.queue_item_id }, function (err) {
       if (err) { toast(t('toast.jumpFailed', { err: err }), true); fadeVolume([fadeId], startVol, 3000); return; }
       setTimeout(loadQueue, 800);
-      fadeVolume([fadeId], startVol, 3000);
+      waitForPlaybackSwitch(targetUri, GENTLE_FADE_UP_TIMEOUT_MS, function () { fadeVolume([fadeId], startVol, 3000); });
     });
   });
 };
@@ -5595,6 +5686,16 @@ $('stationMore').onclick = function () {
   }
 };
 
+/* Not a dropdown toggle like its siblings - a momentary action, so the
+   .on accent class is just a brief "in progress" pulse rather than an
+   open/closed state (cleared again once refreshAllData()'s callback
+   lands). */
+$('headerRefresh').onclick = function () {
+  $('headerRefresh').className = 'station-more on';
+  refreshAllData();
+  setTimeout(function () { $('headerRefresh').className = 'station-more'; }, 600);
+};
+
 /* ==================================================================
    QUICK ACTIONS
    ==================================================================
@@ -5625,6 +5726,54 @@ function fadeVolume(ids, target, durationMs, cb) {
       if (cb) { cb(); }
     }
   }, 150);
+}
+
+/* "Gently play now"/"Gently play now" from the queue (see both
+   #aGently and #qiGently below) used to fade the volume back up
+   immediately once the play_media/play_index *command* was accepted
+   by the server - but that only confirms the request was queued, not
+   that the player has actually switched over: the previous track can
+   still be mid-stop/fade on the player at that point, so the fade-up
+   would audibly overlap it before it had fully stopped. This instead
+   waits for the active queue/player to actually report `targetUri` as
+   the current, playing media before calling `cb` (the fade-up),
+   falling back to a timeout if that confirmation never arrives (an
+   odd provider edge case, a queue with no trackable current_item, …)
+   so the player is never left silently stuck at 0% forever.
+   checkGentlyPlayWatchers() (called from handleEvent() whenever fresh
+   player/queue state arrives) re-checks every still-pending watcher;
+   a plain array rather than one listener per call keeps this cheap
+   even if several gentle-plays happen in quick succession. */
+var GENTLE_FADE_UP_TIMEOUT_MS = 8000;
+var gentlyPlayWatchers = [];
+
+function waitForPlaybackSwitch(targetUri, timeoutMs, cb) {
+  if (!targetUri) { cb(); return; }
+  var timer;
+  function cleanup() {
+    var idx = gentlyPlayWatchers.indexOf(check);
+    if (idx >= 0) { gentlyPlayWatchers.splice(idx, 1); }
+    clearTimeout(timer);
+  }
+  function check() {
+    var q = activeQueue();
+    var p = activePlayer();
+    var curUri = (q && q.current_item && q.current_item.media_item && q.current_item.media_item.uri) ||
+                 (p && p.current_media && p.current_media.uri) || null;
+    var playing = q ? (q.state === 'playing') : !!(p && p.state === 'playing');
+    if (!playing || curUri !== targetUri) { return; }
+    cleanup();
+    cb();
+  }
+  gentlyPlayWatchers.push(check);
+  timer = setTimeout(function () { cleanup(); cb(); }, timeoutMs);
+  check();
+}
+
+function checkGentlyPlayWatchers() {
+  if (!gentlyPlayWatchers.length) { return; }
+  var watchers = gentlyPlayWatchers.slice();
+  for (var i = 0; i < watchers.length; i++) { watchers[i](); }
 }
 
 /* Play Music: resumes the active player (MA has no separate "play last
@@ -5747,6 +5896,74 @@ function recordRecentlyPlayed(mi, media, uri, pic) {
   saveRecentlyPlayedLog();
 }
 
+/* ---- Client-side play statistics (last played / play count) ----
+   The Collection page's "Last Played"/"Play Count" sort modes used to
+   read `it.last_played`/`it.play_count` straight off the server item
+   (see sortMediaItems()) - plausible field names given this project's
+   other MA library-row assumptions (timestamp_added, etc.), but never
+   actually confirmed, and in practice both sorts turned out to be a
+   no-op: the fields are either absent or not populated by
+   music/<type>s/library_items, so every comparison fell back to the
+   same 0 and left the original order untouched. Rather than keep
+   guessing at different field/endpoint names with no way to verify
+   them here, this builds the same statistics client-side instead -
+   exactly the fix already applied to the Lounge page's "Recently
+   Played" section (see above), extended to also count plays, and
+   keyed by uri so it can be looked up for *any* item, not just the
+   capped list recentlyPlayedLog keeps for the Lounge UI. Updated from
+   the same renderNow() track-change hook as recordRecentlyPlayed()
+   (see recordPlayStat() there), so it only reflects plays that
+   actually happened through this app/client - an accepted limitation,
+   same as the Lounge log. */
+var PLAY_STATS_KEY = 'ma-dashboard-play-stats';
+var PLAY_STATS_LIMIT = 2000;   /* uris tracked - evicts the least-recently-played entries beyond this, so a long-running kiosk can't grow this without bound */
+var playStats = loadPlayStats();
+
+function loadPlayStats() {
+  try {
+    var raw = localStorage.getItem(PLAY_STATS_KEY);
+    if (raw) { return JSON.parse(raw); }
+  } catch (e) { /* private browsing, corrupt JSON, or similar - start empty */ }
+  return {};
+}
+
+function savePlayStats() {
+  try { localStorage.setItem(PLAY_STATS_KEY, JSON.stringify(playStats)); } catch (e) { /* ignore */ }
+}
+
+function recordPlayStat(uri) {
+  if (!uri) { return; }
+  var now = Date.now();
+  var existing = playStats[uri];
+  if (existing) { existing.lastPlayed = now; existing.playCount = (existing.playCount || 0) + 1; }
+  else { playStats[uri] = { lastPlayed: now, playCount: 1 }; }
+
+  var keys = [];
+  for (var k in playStats) { if (playStats.hasOwnProperty(k)) { keys.push(k); } }
+  if (keys.length > PLAY_STATS_LIMIT) {
+    keys.sort(function (a, b) { return (playStats[a].lastPlayed || 0) - (playStats[b].lastPlayed || 0); });
+    var toRemove = keys.length - PLAY_STATS_LIMIT;
+    for (var i = 0; i < toRemove; i++) { delete playStats[keys[i]]; }
+  }
+  savePlayStats();
+}
+
+/* Read-side helpers for sortMediaItems() - prefer the client-tracked
+   stat (real, verified data for anything played through this app),
+   falling back to the server's own last_played/play_count field in
+   case a given MA version/provider combination actually does populate
+   it after all, rather than ignoring it outright. */
+function lastPlayedOf(it) {
+  var stat = it && it.uri && playStats[it.uri];
+  if (stat && stat.lastPlayed) { return stat.lastPlayed; }
+  return (it && it.last_played) || 0;
+}
+function playCountOf(it) {
+  var stat = it && it.uri && playStats[it.uri];
+  if (stat && stat.playCount) { return stat.playCount; }
+  return (it && it.play_count) || 0;
+}
+
 /* Best-effort name-based filter for provider-generated "radio"/"mix"
    style playlist shells (Spotify's Daily Mix/Discover Weekly, similar
    auto-generated playlists other providers surface) - MA doesn't expose
@@ -5860,6 +6077,7 @@ function loadLoungePage(force) {
   loungeStatus.recommended = 'loading';
   ensureLoungeCategoryContainers();
   renderLoungeFilters();
+  renderLoungeQuickAccess();
   loadLoungeRecentSection();
   renderLoungeCategory('recent');
   renderLoungeCategory('albums');
@@ -5873,6 +6091,47 @@ function loadLoungePage(force) {
 function refreshLoungeData() {
   toast(t('lounge.refreshing'));
   loadLoungePage(true);
+}
+
+var LOUNGE_QUICK_ACCESS_LIMIT = 15;
+
+/* "Recently Played (All)" - a fixed, always-visible row right at the
+   very top of the Lounge page (above even Quick Actions), per explicit
+   request for one-tap quick access to whatever was just played. Unlike
+   the "Recently Played" *category* further down (loadLoungeRecentSection(),
+   grouped into one subsection per provider), this is deliberately a
+   single flat, chronological rack straight from recentlyPlayedLog -
+   cross-provider and cross-media-type (including radio) by
+   construction, since that log already records anything that plays
+   through this app regardless of source. Also deliberately NOT subject
+   to loungeFilter/loungeSourceFilter: it always shows literally what
+   was just played, independent of whatever the rest of the page is
+   currently filtered to. Synchronous, no network call - same log the
+   "Recently Played" category reads, just not re-grouped. */
+function renderLoungeQuickAccess() {
+  var box = $('loungeQuickAccess');
+  box.innerHTML = '';
+  var head = document.createElement('div');
+  head.className = 'menu-head';
+  setText(head, t('lounge.quickAccessHeading'));
+  box.appendChild(head);
+
+  if (!recentlyPlayedLog.length) {
+    var hint = document.createElement('div');
+    hint.className = 'hint';
+    setText(hint, t('lounge.quickAccessEmpty'));
+    box.appendChild(hint);
+    return;
+  }
+
+  var cards = [];
+  for (var i = 0; i < recentlyPlayedLog.length && i < LOUNGE_QUICK_ACCESS_LIMIT; i++) {
+    var e = recentlyPlayedLog[i];
+    var itLike = e.mi || { uri: e.uri, name: e.name, media_type: e.mediaType, artists: e.artist ? [{ name: e.artist }] : [] };
+    var imageUrl = e.mi ? (imgUrl(e.mi, CFG.IMG_THUMB) || e.image) : e.image;
+    cards.push(rackCard(itLike, e.mediaType, { imageUrl: imageUrl }));
+  }
+  box.appendChild(renderRack(cards));
 }
 
 /* "Recently played" - synchronous, no network call, just the client-
