@@ -252,7 +252,7 @@ html, body {
 .settings-menu .menu-head:not(:first-child) { margin-top: 14px; }
 
 /* Connection indicator light, far right in the header */
-.link { width: 9px; height: 9px; border-radius: 5px; background: var(--danger); margin-left: 14px; -webkit-flex-shrink: 0; flex-shrink: 0; }
+.link { width: 9px; height: 9px; border-radius: 5px; background: var(--danger); margin-left: 14px; -webkit-flex-shrink: 0; flex-shrink: 0; cursor: pointer; }
 .link.on { background: var(--success); }
 
 /* ---------- Page router ----------
@@ -354,10 +354,17 @@ html, body {
   -webkit-flex: 1; flex: 1; min-height: 0;
   display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column;
 }
-.lounge-body { -webkit-flex: 1; flex: 1; min-height: 0; padding: 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.lounge-body { -webkit-flex: 1; flex: 1; min-height: 0; padding: 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; position: relative; }
 .lounge-section { margin-bottom: 26px; }
 .lounge-section:last-child { margin-bottom: 0; }
 .lounge-section .qa-row { margin-top: 10px; }
+/* Quick Actions on the Lounge page sit in a full-width page body instead
+   of the narrow #stationMenu dropdown the same two buttons also appear
+   in - without a cap, flex:1 stretches each button into an oversized,
+   sparse-looking rectangle on anything wider than a phone. Capping the
+   row's own width (rather than the buttons) keeps both buttons a
+   reasonable, evenly-spaced size and centers the pair instead. */
+.lounge-qa-section .qa-row { max-width: 320px; }
 /* .menu-head is otherwise only styled when scoped under .station-menu/
    .group-menu (see above) - scoped the same way here instead of making
    that shared base class unscoped, so section headings on this page
@@ -367,10 +374,45 @@ html, body {
   font-family: "Roboto Mono", "Courier New", monospace; font-size: 12px; letter-spacing: 1.6px;
   text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px;
 }
-/* Per-provider subheadings one level below the section's own .menu-head
-   (e.g. "Recently Played" > "Tidal") - reuses the same look the Add-to-
-   Playlist sheet's provider grouping already uses (see "Add to Playlist"). */
-.lounge-section .pl-sec:first-of-type { padding-top: 0; }
+/* Pull-to-refresh hint (see wireLoungePullToRefresh()) - purely an
+   opacity fade driven by the live drag distance while already scrolled
+   to the top of .lounge-body, never a layout change, so updating it on
+   every touchmove stays cheap. */
+.lounge-pull-hint {
+  position: absolute; top: 4px; left: 0; right: 0; text-align: center; z-index: 1;
+  font-family: "Roboto Mono", "Courier New", monospace; font-size: 11px; letter-spacing: 1.2px;
+  text-transform: uppercase; color: var(--text-muted); opacity: 0; pointer-events: none;
+  transition: opacity 0.15s;
+}
+/* "Record rack" cards - the Lounge page's horizontal, artwork-forward
+   alternative to the vertical .list/mediaRow() rows used elsewhere,
+   modeled on the Radio page's .radio-tile. Deliberately plain native
+   overflow-x scrolling (-webkit-overflow-scrolling: touch, same as the
+   vertical scroll areas throughout this app) plus CSS scroll-snap for
+   the "flipping through records" feel, rather than any JS-driven
+   momentum/animation loop - both are handled entirely by the browser's
+   own compositor, so this stays light even on an old iPad. */
+.rack-scroll {
+  display: -webkit-flex; display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity; padding: 2px 2px 12px; margin: 0 -2px;
+  cursor: -webkit-grab; cursor: grab;
+}
+.rack-card {
+  -webkit-flex-shrink: 0; flex-shrink: 0; width: 136px; margin-right: 14px;
+  scroll-snap-align: start; cursor: pointer;
+}
+.rack-card:last-child { margin-right: 2px; }
+.rack-art {
+  width: 136px; height: 136px; position: relative; overflow: hidden;
+  background-color: var(--surface); background-size: cover; background-position: center;
+  border: 1px solid var(--border); margin-bottom: 8px;
+}
+.rack-art .rack-ph { font-size: 34px; color: var(--border); text-align: center; line-height: 136px; }
+/* Same hardcoded-white exception as .radio-tile .rt-name: this sits
+   over an arbitrary, unthemed cover image rather than a themed surface. */
+.rack-fav { position: absolute; top: 6px; right: 6px; color: #fff; font-size: 15px; text-shadow: 0 1px 3px rgba(0,0,0,0.7); }
+.rack-name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+.rack-sub { font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---------- Radio (favorite stations grid, grouped by country) ---------- */
 #pageRadio {
@@ -1080,16 +1122,24 @@ html, body {
 
     <div id="pageLounge" style="display:none;">
       <div class="page-title" data-i18n="pagetitle.lounge">Lounge</div>
-      <div class="lounge-body">
-        <div class="lounge-section">
+      <div class="lounge-body" id="loungeBody">
+        <div id="loungePullHint" class="lounge-pull-hint"></div>
+        <div class="lounge-section lounge-qa-section">
           <div class="menu-head" data-i18n="top.quickActions">Quick Actions</div>
           <div class="qa-row">
             <div class="qa-btn" id="qaPlayMusicLounge" data-i18n="qa.playMusic">Play Music</div>
             <div class="qa-btn" id="qaSleepLounge" data-i18n="qa.sleep">Sleep</div>
           </div>
         </div>
-        <div id="loungeRecent"></div>
-        <div id="loungeRecommended"></div>
+        <div class="filter-section">
+          <div class="filter-label" data-i18n="filter.sectionFilter">Filter</div>
+          <div class="filters" id="loungeTypeFilters"></div>
+        </div>
+        <div class="filter-section">
+          <div class="filter-label" data-i18n="filter.sectionSource">Source</div>
+          <div class="filters" id="loungeSourceFilters"></div>
+        </div>
+        <div id="loungeSections"></div>
       </div>
     </div>
 
@@ -1475,7 +1525,7 @@ html, body {
    pageshow for weeks - without the timer, the update check would be
    effectively dead.
    ================================================================== */
-var APP_VERSION = '2026-10-18.1';
+var APP_VERSION = '2026-10-19.4';
 var UPDATE_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 
 /* ==================================================================
@@ -1635,6 +1685,10 @@ var STRINGS = {
     "common.loadError": "Could not be loaded ({err}).",
     "common.noPlayerSelected": "No player selected",
     "toast.credentialsMissing": "Credentials missing. Create ma-env.js.",
+    "toast.pinging": "Pinging {url} …",
+    "toast.pingOk": "{url} responded in {ms} ms",
+    "toast.pingTimeout": "Ping to {url} timed out",
+    "toast.pingFailed": "Ping to {url} failed: {err}",
     "toast.noWebSocket": "This browser does not support WebSocket",
     "toast.loginRejected": "Login rejected: {err}",
     "toast.disconnected": "Connection lost",
@@ -1660,9 +1714,21 @@ var STRINGS = {
     "lounge.recentHeading": "Recently Played",
     "lounge.recentError": "Could not load recently played items.",
     "lounge.recentEmpty": "Nothing played recently yet.",
+    "lounge.albumsHeading": "Recently Added Albums",
+    "lounge.albumsError": "Could not load recently added albums.",
+    "lounge.albumsEmpty": "No recently added albums yet.",
+    "lounge.tracksHeading": "Recently Added & Favorite Tracks",
+    "lounge.tracksError": "Could not load recently added tracks.",
+    "lounge.tracksEmpty": "No recently added or favorite tracks yet.",
     "lounge.recommendedHeading": "Recommended",
     "lounge.recommendedError": "Could not load recommendations.",
     "lounge.recommendedEmpty": "No recommendations available.",
+    "lounge.filterAll": "All",
+    "lounge.sourceEmpty": "Nothing from this source in this category.",
+    "lounge.pullRefresh": "Pull to refresh",
+    "lounge.releaseRefresh": "Release to refresh",
+    "lounge.refreshing": "Refreshing…",
+    "lounge.refreshed": "Lounge refreshed.",
     "radio.empty": "No favorite radio stations yet.",
     "radio.otherGroup": "Other",
     "source.all": "All sources",
@@ -2070,6 +2136,35 @@ function probeClock() {
   };
   try { x.send(null); } catch (e3) { /* fine either way, skew just stays 0 */ }
 }
+
+/* ------------------------------------------------------------------
+   Manual connectivity check: tapping the connection light (#link, see
+   setLink()) hits the same lightweight /info endpoint probeClock()
+   already uses (CORS-enabled, cheap) and reports the round-trip time -
+   or the error - as a toast. Not a real ICMP ping (browsers can't send
+   one), just an HTTP round-trip to the MA server's own base URL; good
+   enough as a quick "is it actually reachable right now" check without
+   digging into the browser's network tab. Works regardless of the
+   light's current color - if it's red, this is exactly when you'd want
+   to check.
+------------------------------------------------------------------ */
+function pingServer() {
+  var url = base() + '/info';
+  var startedAt = Date.now();
+  toast(t('toast.pinging', { url: url }));
+  var x = new XMLHttpRequest();
+  try { x.open('GET', url, true); } catch (e) { toast(t('toast.pingFailed', { url: url, err: String(e) }), true); return; }
+  x.timeout = 5000;
+  x.ontimeout = function () { toast(t('toast.pingTimeout', { url: url }), true); };
+  x.onreadystatechange = function () {
+    if (x.readyState !== 4) { return; }
+    var ms = Date.now() - startedAt;
+    if (x.status >= 200 && x.status < 400) { toast(t('toast.pingOk', { url: url, ms: ms })); }
+    else { toast(t('toast.pingFailed', { url: url, err: 'HTTP ' + (x.status || 0) }), true); }
+  };
+  try { x.send(null); } catch (e2) { toast(t('toast.pingFailed', { url: url, err: String(e2) }), true); }
+}
+$('link').onclick = pingServer;
 
 /* ------------------------------------------------------------------
    Update check for the iOS homescreen web clip. WebKit stubbornly holds
@@ -2954,6 +3049,7 @@ function renderNow() {
     npFav = null;
     paintNowHeart();
     refreshNowFav();
+    recordRecentlyPlayed(mi, media, uri, pic);
   }
 
   /* Add-to-playlist button */
@@ -3380,6 +3476,7 @@ function refreshAvailableSources() {
     availableSourceDomains = domains;
     renderSourceFilters('sourceFilters', availableSourceDomains, searchSourceFilter, onPickSearchSource);
     renderSourceFilters('libSourceFilters', availableSourceDomains, librarySourceFilter, onPickLibrarySource);
+    renderSourceFilters('loungeSourceFilters', availableSourceDomains, loungeSourceFilter, onPickLoungeSource);
   });
 }
 
@@ -4993,7 +5090,7 @@ var currentTab = 'now';
 var navOriginTab = null;
 
 var TABS = {
-  lounge:  { pane: 'pageLounge',    init: loadLoungePage },
+  lounge:  { pane: 'pageLounge',    init: function () { loadLoungePage(false); } },
   now:     { pane: 'pageNow',       init: null },
   radio:   { pane: 'pageRadio',     init: loadRadioGrid },
   library: { pane: 'pageLibSearch', init: function () { showLibSearchSide('library'); buildLibFilters(); loadLibrary(currentLibType); } },
@@ -5583,10 +5680,72 @@ document.addEventListener('click', function (e) {
    ==================================================================
    #pageLounge, the leftmost footer tab - a "home" page combining the
    Quick Actions buttons (also reachable from the #stationMenu dropdown,
-   see doPlayMusic()/doSleep() above) with two best-effort "what to play"
-   sections. */
-var LOUNGE_RECENT_TYPES = ['track', 'album', 'artist', 'playlist'];
-var LOUNGE_RECENT_LIMIT = 10;   /* per provider group, after merging */
+   see doPlayMusic()/doSleep() above) with several best-effort "what to
+   play" sections, each rendered as a horizontally-scrollable rack of
+   larger artwork cards (see the .rack-scroll/.rack-card CSS) rather
+   than the vertical .list/mediaRow() rows used elsewhere. */
+
+/* ---- Client-side "recently played" log ----
+   NOT derived from library last_played timestamps (the previous
+   approach here): that was unreliable for two reasons - the
+   music/<type>s/library_items fetch is capped at CFG.LIST_LIMIT with no
+   guaranteed recency ordering from the server, and more fundamentally
+   it only ever covers items actually saved to the library, so anything
+   played via search/radio without being favorited/added would never
+   show up there at all, no matter how it's sorted. Instead this simply
+   logs whatever the app itself observes playing, hooked into the exact
+   same track-change detection renderNow() already does for npUri (see
+   the recordRecentlyPlayed() call there) - 100% accurate for anything
+   actually played through this app, and provider-agnostic by
+   construction since it doesn't care where the track came from.
+   Persisted via localStorage so an always-on kiosk display accumulates
+   real history across reloads; starts empty on a fresh install or after
+   clearing site data, an accepted tradeoff for not guessing at an
+   unverified MA "recently played" command. Deliberately kept separate
+   from music/recommendations (the "Recommended" section below) rather
+   than merged into it. */
+var RECENTLY_PLAYED_KEY = 'ma-dashboard-recently-played';
+var RECENTLY_PLAYED_LIMIT = 30;
+var recentlyPlayedLog = loadRecentlyPlayedLog();
+
+function loadRecentlyPlayedLog() {
+  try {
+    var raw = localStorage.getItem(RECENTLY_PLAYED_KEY);
+    if (raw) { return JSON.parse(raw); }
+  } catch (e) { /* private browsing, corrupt JSON, or similar - start empty */ }
+  return [];
+}
+
+function saveRecentlyPlayedLog() {
+  try { localStorage.setItem(RECENTLY_PLAYED_KEY, JSON.stringify(recentlyPlayedLog)); } catch (e) { /* ignore */ }
+}
+
+/* Called from renderNow() whenever the playing track's uri actually
+   changes. `mi` (the resolved media_item, if the server gave us one via
+   the queue) is kept verbatim so the Lounge card can later render it
+   exactly like any other library/search item; `pic` (the cover URL
+   renderNow() already resolved) is kept as a ready-to-use fallback for
+   the rarer case of a foreign source (AirPlay/Spotify Connect, …) with
+   no queue-tracked media_item at all. */
+function recordRecentlyPlayed(mi, media, uri, pic) {
+  if (!uri) { return; }
+  var entry = {
+    uri: uri,
+    name: (mi && mi.name) || media.title || '',
+    artist: (mi && artistsOf(mi)) || media.artist || '',
+    mediaType: (mi && mi.media_type) || 'track',
+    providerDomain: (mi && itemProviderDomains(mi)[0]) || null,
+    image: pic || null,
+    mi: mi || null,
+    playedAt: Date.now()
+  };
+  for (var i = recentlyPlayedLog.length - 1; i >= 0; i--) {
+    if (recentlyPlayedLog[i].uri === uri) { recentlyPlayedLog.splice(i, 1); }
+  }
+  recentlyPlayedLog.unshift(entry);
+  if (recentlyPlayedLog.length > RECENTLY_PLAYED_LIMIT) { recentlyPlayedLog.length = RECENTLY_PLAYED_LIMIT; }
+  saveRecentlyPlayedLog();
+}
 
 /* Best-effort name-based filter for provider-generated "radio"/"mix"
    style playlist shells (Spotify's Daily Mix/Discover Weekly, similar
@@ -5617,176 +5776,581 @@ function isGenericFolderName(name) {
   return false;
 }
 
-function loadLoungePage() {
-  loadLoungeRecent();
-  loadLoungeRecommendations();
-}
+/* ---- Section data model ----
+   Four top-level categories, in display order; `headKey`/`emptyKey`/
+   `errorKey` are STRINGS keys. `loungeData[key]` is NOT a flat list of
+   items but a list of per-provider SUBSECTIONS - each its own rack with
+   its own heading, e.g. "Recently Added Albums - Tidal" and "Recently
+   Added Albums - YouTube Music" as two separate racks rather than one
+   mixed rack with a provider tag on every card. Each subsection is
+   { title, domain (the provider domain this subsection is for, or null
+   if unknown - used by the "Source" filter chip row, not displayed
+   directly since the title already states it), items: [{ it, type,
+   imageUrl (optional override) }] }.
+   `loungeStatus[key]` is 'loading'|'ready'|'error'. "recent" has no
+   error state since it never touches the network. */
+var LOUNGE_SECTIONS = [
+  { key: 'recent',      headKey: 'lounge.recentHeading',      emptyKey: 'lounge.recentEmpty' },
+  { key: 'albums',      headKey: 'lounge.albumsHeading',      emptyKey: 'lounge.albumsEmpty',      errorKey: 'lounge.albumsError' },
+  { key: 'tracks',      headKey: 'lounge.tracksHeading',      emptyKey: 'lounge.tracksEmpty',      errorKey: 'lounge.tracksError' },
+  { key: 'recommended', headKey: 'lounge.recommendedHeading',  emptyKey: 'lounge.recommendedEmpty', errorKey: 'lounge.recommendedError' }
+];
+var LOUNGE_SECTION_LIMIT = 20;   /* cards per rack */
+var loungeData = { recent: [], albums: [], tracks: [], recommended: [] };
+var loungeStatus = { recent: 'ready', albums: 'loading', tracks: 'loading', recommended: 'loading' };
+var loungeLoaded = false;
+var loungeFilter = 'all';          /* 'all' or one of LOUNGE_SECTIONS[].key - hides/shows whole categories (every subsection in them), not individual items */
+var loungeSourceFilter = 'all';    /* 'all' or a provider domain from availableSourceDomains - hides whole subsections whose own `domain` doesn't match, same granularity as loungeFilter, just a second independent axis rather than a sort */
 
-/* "Recently played", grouped by provider - deliberately built from the
-   same already-proven music/<type>s/library_items commands LIB_TYPES
-   already uses (not a new/unverified command), filtered to items that
-   carry a last_played timestamp and sorted by it. last_played is the
-   same MA library-row field already relied on for the Collection page's
-   "Last Played" sort mode (see "Sorting") - present on every item in
-   practice, 0/skipped otherwise rather than erroring. */
-function loadLoungeRecent() {
-  var box = $('loungeRecent');
-  box.innerHTML = '';
-  var heading = document.createElement('div');
-  heading.className = 'menu-head';
-  setText(heading, t('lounge.recentHeading'));
-  box.appendChild(heading);
-  var hint = document.createElement('div');
-  hint.className = 'hint';
-  setText(hint, t('common.loading'));
-  box.appendChild(hint);
-
-  var remaining = LOUNGE_RECENT_TYPES.length;
-  var merged = [];
-  var failCount = 0;
-  for (var i = 0; i < LOUNGE_RECENT_TYPES.length; i++) {
-    (function (type) {
-      var def = null;
-      for (var j = 0; j < LIB_TYPES.length; j++) { if (LIB_TYPES[j].type === type) { def = LIB_TYPES[j]; break; } }
-      if (!def) { remaining--; return; }
-      send(def.cmd, { limit: CFG.LIST_LIMIT, offset: 0 }, function (err, items) {
-        remaining--;
-        if (err) { failCount++; }
-        else if (items) {
-          for (var k = 0; k < items.length; k++) {
-            if (items[k].last_played) { merged.push({ it: items[k], type: type }); }
-          }
-        }
-        if (remaining === 0) { renderLoungeRecent(merged, failCount === LOUNGE_RECENT_TYPES.length); }
-      });
-    })(LOUNGE_RECENT_TYPES[i]);
-  }
-}
-
-function renderLoungeRecent(merged, allFailed) {
-  var box = $('loungeRecent');
-  box.innerHTML = '';
-  var heading = document.createElement('div');
-  heading.className = 'menu-head';
-  setText(heading, t('lounge.recentHeading'));
-  box.appendChild(heading);
-
-  if (allFailed) {
-    var errHint = document.createElement('div');
-    errHint.className = 'hint';
-    setText(errHint, t('lounge.recentError'));
-    box.appendChild(errHint);
-    return;
-  }
-
-  var kept = [];
-  for (var i = 0; i < merged.length; i++) {
-    if (!isGenericGeneratedPlaylist(merged[i].it)) { kept.push(merged[i]); }
-  }
-  if (!kept.length) {
-    var emptyHint = document.createElement('div');
-    emptyHint.className = 'hint';
-    setText(emptyHint, t('lounge.recentEmpty'));
-    box.appendChild(emptyHint);
-    return;
-  }
-
+/* Groups an already-capped, flat list of items into one subsection per
+   provider domain, titled "<heading> - <Provider>" (e.g. "Recently
+   Added Albums - Tidal") - the per-provider subsection breakdown used
+   for "Recently Added Albums"/"…Tracks" and the client-side "Recently
+   Played" log. "Recommended" builds its subsections directly from MA's
+   own folder structure instead (see loadLoungeRecommended()), since
+   that's already organized by MA itself rather than needing to be
+   grouped here. Subsections come out in encounter order (first-seen
+   provider first); loungeSourceFilter (see renderLoungeCategory()) can
+   hide all but one of them, but never reorders them. */
+function groupLoungeItemsByProvider(items, type, heading) {
   var groups = {};
-  var domains = [];
-  for (var j = 0; j < kept.length; j++) {
-    var entry = kept[j];
-    var pds = itemProviderDomains(entry.it);
-    var domain = pds.length ? pds[0] : 'library';
-    if (!groups[domain]) { groups[domain] = []; domains.push(domain); }
-    groups[domain].push(entry);
+  var order = [];
+  for (var i = 0; i < items.length; i++) {
+    var domain = itemProviderDomains(items[i])[0] || 'library';
+    if (!groups[domain]) { groups[domain] = []; order.push(domain); }
+    groups[domain].push({ it: items[i], type: type });
   }
-  domains.sort(function (a, b) {
-    var la = sourceLabel(a), lb = sourceLabel(b);
-    return la < lb ? -1 : (la > lb ? 1 : 0);
+  var subs = [];
+  for (var j = 0; j < order.length; j++) {
+    subs.push({ title: heading + ' - ' + sourceLabel(order[j]), domain: order[j], items: groups[order[j]] });
+  }
+  return subs;
+}
+
+/* `force` re-fetches everything from scratch (pull-to-refresh); a plain
+   tab switch back to Lounge (force=false) leaves already-loaded data
+   and the user's scroll position completely untouched instead of
+   wiping #loungeSections and rebuilding it - rebuilding was the actual
+   cause of "Back" from an album/playlist always landing back at the
+   top of the page: clearing a scrolled container's content collapses
+   its height and clamps scrollTop to 0 even if the same content is put
+   back right after. Skipping the rebuild entirely sidesteps that rather
+   than trying to measure/restore scrollTop after the fact.
+
+   Each category gets its own fetch, its own status, and - critically -
+   its own stable container (see ensureLoungeCategoryContainers()), so
+   the three network calls below settle independently: whichever lands
+   first immediately shows its own "Recently Added Albums"/"…Tracks"/
+   "Recommended" heading plus a "Loading…" hint (via renderLoungeCategory()),
+   and only THAT one category's DOM gets touched again once its own data
+   arrives. Earlier this instead called one shared renderLoungeSections()
+   as the callback for all three requests, which wiped and rebuilt the
+   *entire* #loungeSections tree - every category, every subsection,
+   every card, every wheel listener - up to three extra times after the
+   first paint, each one shifting the whole page's layout underneath
+   whatever the user was doing and reattaching a fresh set of listeners;
+   that churn was the likely cause of the page feeling like it
+   "freezes"/gets stuck while scrolling during the first few seconds on
+   Lounge. */
+function loadLoungePage(force) {
+  if (loungeLoaded && !force) { return; }
+  loungeLoaded = true;
+  loungeStatus.albums = 'loading';
+  loungeStatus.tracks = 'loading';
+  loungeStatus.recommended = 'loading';
+  ensureLoungeCategoryContainers();
+  renderLoungeFilters();
+  loadLoungeRecentSection();
+  renderLoungeCategory('recent');
+  renderLoungeCategory('albums');
+  renderLoungeCategory('tracks');
+  renderLoungeCategory('recommended');
+  loadLoungeAlbums(function () { renderLoungeCategory('albums'); });
+  loadLoungeTracks(function () { renderLoungeCategory('tracks'); });
+  loadLoungeRecommended(function () { renderLoungeCategory('recommended'); });
+}
+
+function refreshLoungeData() {
+  toast(t('lounge.refreshing'));
+  loadLoungePage(true);
+}
+
+/* "Recently played" - synchronous, no network call, just the client-
+   side log above grouped into one subsection per provider ("Recently
+   Played - Tidal", "Recently Played - YouTube Music", …), the same
+   subsection shape groupLoungeItemsByProvider() produces, but built by
+   hand here since each log entry already carries its own provider
+   domain/image rather than a plain item array to group. When a log
+   entry has no resolved media_item (mi, a foreign source with no
+   queue-tracked item), a minimal stand-in object is used instead of
+   leaving `it` null, so tapping the card still opens the action sheet
+   via uri resolution (see "Favorite asymmetry") rather than doing
+   nothing. */
+function loadLoungeRecentSection() {
+  var groups = {};
+  var order = [];
+  for (var i = 0; i < recentlyPlayedLog.length; i++) {
+    var e = recentlyPlayedLog[i];
+    var itLike = e.mi || { uri: e.uri, name: e.name, media_type: e.mediaType, artists: e.artist ? [{ name: e.artist }] : [] };
+    var domain = (e.mi ? itemProviderDomains(e.mi)[0] : e.providerDomain) || 'library';
+    if (!groups[domain]) { groups[domain] = []; order.push(domain); }
+    groups[domain].push({
+      it: itLike,
+      type: e.mediaType,
+      imageUrl: e.mi ? (imgUrl(e.mi, CFG.IMG_THUMB) || e.image) : e.image
+    });
+  }
+  var heading = t('lounge.recentHeading');
+  var subs = [];
+  for (var j = 0; j < order.length; j++) {
+    subs.push({ title: heading + ' - ' + sourceLabel(order[j]), domain: order[j], items: groups[order[j]] });
+  }
+  loungeData.recent = subs;
+}
+
+/* "Recently Added Albums" - music/albums/library_items sorted client-
+   side by timestamp_added (the same MA library-row field the Collection
+   page's "Last Played"/"Name" sort already relies on, see "Sorting" -
+   present in practice on every item, 0 otherwise rather than erroring). */
+function loadLoungeAlbums(cb) {
+  send('music/albums/library_items', { limit: CFG.LIST_LIMIT, offset: 0 }, function (err, items) {
+    if (err || !items) { loungeStatus.albums = 'error'; loungeData.albums = []; cb(); return; }
+    items = items.slice();
+    items.sort(function (a, b) { return (b.timestamp_added || 0) - (a.timestamp_added || 0); });
+    if (items.length > LOUNGE_SECTION_LIMIT) { items.length = LOUNGE_SECTION_LIMIT; }
+    loungeData.albums = groupLoungeItemsByProvider(items, 'album', t('lounge.albumsHeading'));
+    loungeStatus.albums = 'ready';
+    cb();
   });
+}
 
-  for (var g = 0; g < domains.length; g++) {
-    var list = groups[domains[g]];
-    list.sort(function (a, b) { return (b.it.last_played || 0) - (a.it.last_played || 0); });
-    if (list.length > LOUNGE_RECENT_LIMIT) { list.length = LOUNGE_RECENT_LIMIT; }
-
-    var sec = document.createElement('div');
-    sec.className = 'lounge-section';
-    var subHead = document.createElement('div');
-    subHead.className = 'pl-sec';
-    setText(subHead, sourceLabel(domains[g]));
-    sec.appendChild(subHead);
-    var listBox = document.createElement('div');
-    listBox.className = 'list';
-    for (var k = 0; k < list.length; k++) { listBox.appendChild(mediaRow(list[k].it, list[k].type, {})); }
-    sec.appendChild(listBox);
-    box.appendChild(sec);
-  }
+/* "Recently Added & Favorite Tracks" - the top LOUNGE_SECTION_LIMIT
+   music/tracks/library_items by timestamp_added, unioned with any
+   favorited track not already in that set (capped at double the normal
+   limit so a library with many old favorites can't make this section
+   unbounded) - satisfies both halves of the heading without two
+   separate racks. */
+function loadLoungeTracks(cb) {
+  send('music/tracks/library_items', { limit: CFG.LIST_LIMIT, offset: 0 }, function (err, items) {
+    if (err || !items) { loungeStatus.tracks = 'error'; loungeData.tracks = []; cb(); return; }
+    var sorted = items.slice();
+    sorted.sort(function (a, b) { return (b.timestamp_added || 0) - (a.timestamp_added || 0); });
+    var seen = {};
+    var picked = [];
+    for (var i = 0; i < sorted.length && picked.length < LOUNGE_SECTION_LIMIT; i++) {
+      var key = sorted[i].item_id || sorted[i].uri;
+      if (!seen[key]) { seen[key] = true; picked.push(sorted[i]); }
+    }
+    for (var j = 0; j < items.length && picked.length < LOUNGE_SECTION_LIMIT * 2; j++) {
+      if (!items[j].favorite) { continue; }
+      var fkey = items[j].item_id || items[j].uri;
+      if (!seen[fkey]) { seen[fkey] = true; picked.push(items[j]); }
+    }
+    loungeData.tracks = groupLoungeItemsByProvider(picked, 'track', t('lounge.tracksHeading'));
+    loungeStatus.tracks = 'ready';
+    cb();
+  });
 }
 
 /* MA's own cross-provider recommendation engine - NOT verified against
    a live server from here: music/recommendations is a plausible command
    name given this project's other music/* commands, but the exact
    command and its response shape (a flat item list? folders grouped by
-   provider? something else?) haven't been confirmed. Parsed
-   defensively below - if the server rejects the command or the shape
-   doesn't match, this section shows a quiet error hint instead of
-   breaking the rest of the Lounge page. Check the actual command/
-   response shape a current MA release's own web UI uses and adjust
-   loadLoungeRecommendations()/renderLoungeRecommendations() if wrong. */
-function loadLoungeRecommendations() {
-  var box = $('loungeRecommended');
-  box.innerHTML = '<div class="hint">' + t('common.loading') + '</div>';
+   provider? something else?) haven't been confirmed. Parsed defensively
+   below - if the server rejects the command or the shape doesn't match,
+   this section shows a quiet error hint instead of breaking the rest of
+   the Lounge page. Check the actual command/response shape a current MA
+   release's own web UI uses and adjust loadLoungeRecommended() if wrong.
+
+   Unlike "Recently Added Albums"/"…Tracks" above, subsections here come
+   straight from MA's own folder structure (each folder is already a
+   curated, named grouping like "More of What You Like" or "The Hits" -
+   splitting that apart and re-grouping purely by provider would lose
+   the curation) - the provider is simply appended to the existing
+   folder name in parentheses, e.g. "More of What You Like (SoundCloud)"
+   or "The Hits (Tidal)", rather than replacing the title the way the
+   other two sections' "<heading> - <Provider>" subsections do. */
+function loadLoungeRecommended(cb) {
   send('music/recommendations', {}, function (err, result) {
-    if (err || !result) {
-      box.innerHTML = '<div class="hint">' + t('lounge.recommendedError') + '</div>';
-      return;
+    if (err || !result) { loungeStatus.recommended = 'error'; loungeData.recommended = []; cb(); return; }
+
+    /* An array of folder-like objects (each carrying its own .items) is
+       rendered as one subsection per folder; a flat array of media
+       items is treated as a single unnamed folder instead. */
+    var folders;
+    if (result.length && result[0] && result[0].items) { folders = result; }
+    else if (result.length) { folders = [{ name: null, provider_domain: null, items: result }]; }
+    else { folders = []; }
+
+    var subs = [];
+    for (var i = 0; i < folders.length; i++) {
+      var folder = folders[i];
+      if (!folder || !folder.items || !folder.items.length) { continue; }
+      if (isGenericFolderName(folder.name)) { continue; }
+
+      var items = [];
+      for (var j = 0; j < folder.items.length; j++) {
+        if (!isGenericGeneratedPlaylist(folder.items[j])) { items.push(folder.items[j]); }
+      }
+      if (!items.length) { continue; }
+
+      /* Prefer the folder's own provider_domain (MA's recommendation
+         folders are documented as already grouped by provider); fall
+         back to the first item's own provider if the folder itself
+         didn't carry one. */
+      var domain = folder.provider_domain || (itemProviderDomains(items[0])[0] || null);
+      var baseName = folder.name || t('lounge.recommendedHeading');
+      var title = domain ? (baseName + ' (' + sourceLabel(domain) + ')') : baseName;
+
+      var cardItems = [];
+      for (var k = 0; k < items.length; k++) { cardItems.push({ it: items[k], type: items[k].media_type }); }
+      subs.push({ title: title, domain: domain, items: cardItems });
     }
-    renderLoungeRecommendations(result);
+    loungeData.recommended = subs;
+    loungeStatus.recommended = 'ready';
+    cb();
   });
 }
 
-function renderLoungeRecommendations(result) {
-  var box = $('loungeRecommended');
+/* One "record" card for a Lounge rack - larger square artwork than the
+   regular .list/mediaRow() rows elsewhere, modeled on the Radio page's
+   .radio-tile. `opts.imageUrl` lets a caller override the artwork that
+   would otherwise be derived from `it` (used for the client-side
+   recently-played log, whose entries aren't always a full resolved
+   media item - see loadLoungeRecentSection()). Provider is no longer
+   shown per card: every card already sits inside a single-provider
+   subsection whose own heading states the provider (e.g. "Recently
+   Added Albums - Tidal", "The Hits (Tidal)" - see
+   groupLoungeItemsByProvider()/loadLoungeRecommended()), so repeating
+   it on every card underneath would just be redundant. */
+function rackCard(it, type, opts) {
+  opts = opts || {};
+  var mt = type || (it && it.media_type) || 'track';
+  var card = document.createElement('div');
+  card.className = 'rack-card';
+
+  var art = document.createElement('div');
+  art.className = 'rack-art';
+  var src = opts.imageUrl !== undefined ? opts.imageUrl : imgUrl(it, CFG.IMG_THUMB);
+  if (src) {
+    art.style.backgroundImage = 'url(' + src + ')';
+  } else {
+    var ph = document.createElement('div');
+    ph.className = 'rack-ph';
+    ph.innerHTML = '&#9835;';
+    art.appendChild(ph);
+  }
+  if (it && it.favorite) {
+    var fav = document.createElement('div');
+    fav.className = 'rack-fav';
+    fav.innerHTML = '&#9829;';
+    art.appendChild(fav);
+  }
+  card.appendChild(art);
+
+  var name = document.createElement('div');
+  name.className = 'rack-name';
+  setText(name, (it && it.name) || '—');
+  card.appendChild(name);
+
+  var sub = document.createElement('div');
+  sub.className = 'rack-sub';
+  setText(sub, artistsOf(it));
+  card.appendChild(sub);
+
+  var canNav = it && NAVIGABLE[mt];
+  card.onclick = function () {
+    if (!it) { return; }
+    if (canNav) { openItem(it, mt); } else { openSheet(it, mt, {}); }
+  };
+  return card;
+}
+
+function renderRack(cards) {
+  var scroller = document.createElement('div');
+  scroller.className = 'rack-scroll';
+  for (var i = 0; i < cards.length; i++) { scroller.appendChild(cards[i]); }
+  wireRackWheelScroll(scroller);
+  wireRackDragScroll(scroller);
+  return scroller;
+}
+
+/* Desktop mice typically only have a vertical scroll wheel, so a plain
+   overflow-x: auto track would only be reachable there via a trackpad's
+   horizontal gesture, shift+wheel, or dragging the (often hidden)
+   scrollbar directly - not the common case. Converts a vertical wheel
+   delta into horizontal scrolling on the rack whenever it's the
+   dominant axis, so a plain mouse wheel scrolls the rack sideways; a
+   trackpad's real horizontal swipe (arrives mostly as deltaX already)
+   is left to scroll the element natively instead of being intercepted
+   here.
+
+   Critically, this only calls preventDefault() while the rack actually
+   still has room to move further in that direction - once scrollLeft
+   hits either end (including racks with no overflow at all, where
+   atStart and atEnd are both true from the start), the handler returns
+   without touching the event, letting it propagate to #loungeBody so
+   the page keeps scrolling vertically instead. The earlier version
+   called preventDefault() unconditionally on every dominant-vertical
+   wheel tick over *any* rack, which - since the Lounge page is now
+   mostly racks - silently swallowed the mouse wheel almost everywhere
+   on the page: the cursor only had to be hovering a rack (scrollable or
+   not) for a normal vertical scroll gesture to do nothing at all,
+   which is what the "page freezes/gets stuck scrolling" reports were
+   actually seeing. */
+function wireRackWheelScroll(scroller) {
+  scroller.addEventListener('wheel', function (e) {
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) { return; }
+    var atStart = scroller.scrollLeft <= 0;
+    var atEnd = scroller.scrollLeft >= (scroller.scrollWidth - scroller.clientWidth - 1);
+    if ((e.deltaY < 0 && atStart) || (e.deltaY > 0 && atEnd)) { return; }
+    scroller.scrollLeft += e.deltaY;
+    e.preventDefault();
+  }, false);
+}
+
+/* Click-and-drag fallback for sideways scrolling - works with a plain
+   mouse on any desktop browser regardless of wheel/trackpad delta
+   quirks (a two-finger trackpad swipe already scrolls .rack-scroll
+   natively via plain overflow-x: auto, no JS needed for that case; the
+   wheel conversion above covers a mouse with only a vertical wheel).
+   Drag state lives in a few module-level variables and is tracked via
+   ONE shared pair of document-level mousemove/mouseup listeners
+   (wireLoungeDragScrollGlobal() below) rather than one pair per rack,
+   so this stays cheap no matter how many racks the page has.
+   `loungeDragMoved` distinguishes an actual drag from a plain click, so
+   dragging across a card doesn't also open it - suppressed via a
+   capture-phase click listener on the scroller itself, which runs
+   before the dragged-over card's own bubble-phase onclick. */
+var loungeDragScroller = null;
+var loungeDragStartX = 0;
+var loungeDragStartScroll = 0;
+var loungeDragMoved = false;
+
+function wireRackDragScroll(scroller) {
+  scroller.addEventListener('mousedown', function (e) {
+    loungeDragScroller = scroller;
+    loungeDragStartX = e.clientX;
+    loungeDragStartScroll = scroller.scrollLeft;
+    loungeDragMoved = false;
+    scroller.style.cursor = 'grabbing';
+  }, false);
+  scroller.addEventListener('click', function (e) {
+    if (loungeDragMoved) {
+      e.stopPropagation();
+      e.preventDefault();
+      loungeDragMoved = false;
+    }
+  }, true);
+}
+
+(function wireLoungeDragScrollGlobal() {
+  document.addEventListener('mousemove', function (e) {
+    if (!loungeDragScroller) { return; }
+    var dx = e.clientX - loungeDragStartX;
+    if (Math.abs(dx) > 3) { loungeDragMoved = true; }
+    loungeDragScroller.scrollLeft = loungeDragStartScroll - dx;
+  }, false);
+  document.addEventListener('mouseup', function () {
+    if (loungeDragScroller) { loungeDragScroller.style.cursor = ''; }
+    loungeDragScroller = null;
+  }, false);
+})();
+
+/* Two independent filters, both operating at subsection granularity
+   (hiding/showing whole provider racks, never reordering or filtering
+   the cards inside one) - no "sort" anymore:
+   - Type filter ("All"/"Recently Played"/"Recently Added Albums"/…,
+     `loungeFilter`): shows only the matching category - every
+     subsection/rack under it.
+   - Source filter ("All" + one chip per actually-configured provider,
+     `loungeSourceFilter`, via the same renderSourceFilters()/
+     availableSourceDomains the Library/Search source chips already
+     use): shows only subsections whose own `domain` matches.
+   Both follow the same .filt chip pattern buildLibFilters() uses for
+   the Collection page.
+
+   The two rows are wired differently on purpose: switching the *type*
+   filter only changes which already-rendered category containers are
+   visible (applyLoungeFilterVisibility(), a handful of style.display
+   writes - no data changed, so nothing needs to be rebuilt); switching
+   the *source* filter changes which subsections within a category are
+   shown at all, so it rebuilds every category's DOM
+   (renderAllLoungeCategories()) - same as a Library/Search source-chip
+   click rebuilding those results. Neither one touches #loungeSections
+   as a whole - see renderLoungeCategory(). */
+function renderLoungeFilters() {
+  var typeBox = $('loungeTypeFilters');
+  typeBox.innerHTML = '';
+  var allChip = document.createElement('div');
+  allChip.className = 'filt' + (loungeFilter === 'all' ? ' on' : '');
+  setText(allChip, t('lounge.filterAll'));
+  allChip.onclick = function () { loungeFilter = 'all'; renderLoungeFilters(); applyLoungeFilterVisibility(); };
+  typeBox.appendChild(allChip);
+  for (var i = 0; i < LOUNGE_SECTIONS.length; i++) {
+    (function (def) {
+      var chip = document.createElement('div');
+      chip.className = 'filt' + (loungeFilter === def.key ? ' on' : '');
+      setText(chip, t(def.headKey));
+      chip.onclick = function () { loungeFilter = def.key; renderLoungeFilters(); applyLoungeFilterVisibility(); };
+      typeBox.appendChild(chip);
+    })(LOUNGE_SECTIONS[i]);
+  }
+
+  renderSourceFilters('loungeSourceFilters', availableSourceDomains, loungeSourceFilter, onPickLoungeSource);
+}
+
+function onPickLoungeSource(d) {
+  loungeSourceFilter = d;
+  renderLoungeFilters();
+  renderAllLoungeCategories();
+}
+
+/* Builds one "no cards yet" placeholder subsection (loading/error/
+   empty) under a category's own heading - used when a whole category
+   has nothing to show, as opposed to the normal case of one real
+   .lounge-section per provider subsection below. */
+function loungeHintSection(headKey, msgKey) {
+  var sec = document.createElement('div');
+  sec.className = 'lounge-section';
+  var head = document.createElement('div');
+  head.className = 'menu-head';
+  setText(head, t(headKey));
+  sec.appendChild(head);
+  var hint = document.createElement('div');
+  hint.className = 'hint';
+  setText(hint, t(msgKey));
+  sec.appendChild(hint);
+  return sec;
+}
+
+/* One stable, empty container per category, created once (id
+   "loungeCat-<key>") and never recreated afterward - renderLoungeCategory()
+   only ever replaces ONE of these containers' contents, so loading one
+   category's data (or re-sorting/re-filtering) never disturbs the
+   already-rendered DOM, scroll position, or wheel listeners of the
+   other three. A second call (e.g. from a pull-to-refresh) is a no-op
+   if the containers already exist. */
+function ensureLoungeCategoryContainers() {
+  var box = $('loungeSections');
+  if (box.getElementsByClassName('lounge-cat').length) { return; }
+  box.innerHTML = '';
+  for (var i = 0; i < LOUNGE_SECTIONS.length; i++) {
+    var div = document.createElement('div');
+    div.className = 'lounge-cat';
+    div.id = 'loungeCat-' + LOUNGE_SECTIONS[i].key;
+    box.appendChild(div);
+  }
+}
+
+/* Shows/hides whole category containers per loungeFilter - cheap,
+   no data touched, so this never needs to rebuild a single card. */
+function applyLoungeFilterVisibility() {
+  for (var i = 0; i < LOUNGE_SECTIONS.length; i++) {
+    var key = LOUNGE_SECTIONS[i].key;
+    var el = $('loungeCat-' + key);
+    if (!el) { continue; }
+    el.style.display = (loungeFilter === 'all' || loungeFilter === key) ? 'block' : 'none';
+  }
+}
+
+/* Rebuilds exactly one category's container - its own "Loading…"/error/
+   empty hint, or its full set of provider subsections/racks - leaving
+   every other category's DOM completely untouched. Called once per
+   category up front (showing the loading hint immediately) and again
+   whenever that category's own data/status actually changes (its own
+   load callback, or a source-filter-chip change via
+   renderAllLoungeCategories()). */
+function renderLoungeCategory(key) {
+  var def = null;
+  for (var i = 0; i < LOUNGE_SECTIONS.length; i++) { if (LOUNGE_SECTIONS[i].key === key) { def = LOUNGE_SECTIONS[i]; break; } }
+  var box = $('loungeCat-' + key);
+  if (!def || !box) { return; }
   box.innerHTML = '';
 
-  /* An array of folder-like objects (each carrying its own .items) is
-     rendered as one section per folder; a flat array of media items is
-     rendered as a single "Recommended" section instead. */
-  var folders;
-  if (result.length && result[0] && result[0].items) { folders = result; }
-  else if (result.length) { folders = [{ name: t('lounge.recommendedHeading'), items: result }]; }
-  else { folders = []; }
+  var status = loungeStatus[key];
+  var allSubs = loungeData[key] || [];
 
-  var any = false;
-  for (var i = 0; i < folders.length; i++) {
-    var folder = folders[i];
-    if (!folder || !folder.items || !folder.items.length) { continue; }
-    if (isGenericFolderName(folder.name)) { continue; }
+  if (status === 'loading' && !allSubs.length) { box.appendChild(loungeHintSection(def.headKey, 'common.loading')); applyLoungeFilterVisibility(); return; }
+  if (status === 'error') { box.appendChild(loungeHintSection(def.headKey, def.errorKey || def.emptyKey)); applyLoungeFilterVisibility(); return; }
+  if (!allSubs.length) { box.appendChild(loungeHintSection(def.headKey, def.emptyKey)); applyLoungeFilterVisibility(); return; }
 
-    var items = [];
-    for (var j = 0; j < folder.items.length; j++) {
-      if (!isGenericGeneratedPlaylist(folder.items[j])) { items.push(folder.items[j]); }
-    }
-    if (!items.length) { continue; }
+  /* The source filter hides whole subsections, same granularity as the
+     type filter above - it never reorders or touches the cards inside
+     one. A dedicated "nothing from this source" hint (rather than the
+     category's normal empty-state text) only shows once a specific
+     source is actually selected and it filtered everything out. */
+  var subs = allSubs;
+  if (loungeSourceFilter !== 'all') {
+    subs = [];
+    for (var f = 0; f < allSubs.length; f++) { if (allSubs[f].domain === loungeSourceFilter) { subs.push(allSubs[f]); } }
+    if (!subs.length) { box.appendChild(loungeHintSection(def.headKey, 'lounge.sourceEmpty')); applyLoungeFilterVisibility(); return; }
+  }
 
+  for (var s = 0; s < subs.length; s++) {
+    var sub = subs[s];
+    if (!sub.items.length) { continue; }
     var sec = document.createElement('div');
     sec.className = 'lounge-section';
     var head = document.createElement('div');
     head.className = 'menu-head';
-    setText(head, folder.name || sourceLabel(folder.provider_domain || 'library') || t('lounge.recommendedHeading'));
+    setText(head, sub.title);
     sec.appendChild(head);
-    var listBox = document.createElement('div');
-    listBox.className = 'list';
-    for (var k = 0; k < items.length; k++) { listBox.appendChild(mediaRow(items[k], items[k].media_type, {})); }
-    sec.appendChild(listBox);
+    var cards = [];
+    for (var k = 0; k < sub.items.length; k++) {
+      cards.push(rackCard(sub.items[k].it, sub.items[k].type, { imageUrl: sub.items[k].imageUrl }));
+    }
+    sec.appendChild(renderRack(cards));
     box.appendChild(sec);
-    any = true;
   }
-  if (!any) {
-    box.innerHTML = '<div class="hint">' + t('lounge.recommendedEmpty') + '</div>';
-  }
+  applyLoungeFilterVisibility();
 }
+
+function renderAllLoungeCategories() {
+  for (var i = 0; i < LOUNGE_SECTIONS.length; i++) { renderLoungeCategory(LOUNGE_SECTIONS[i].key); }
+}
+
+/* Pull-to-refresh: swipe down while #loungeBody is already scrolled to
+   the top. Deliberately touch-only, measurement-only logic (no
+   preventDefault, no transforms on the scroller itself) - it never
+   fights or overrides the browser's own native scrolling/rubber-
+   banding, it just watches the gesture and fades #loungePullHint's
+   opacity in proportion to how far the user has pulled, then triggers
+   refreshLoungeData() on release past the threshold. Re-running the
+   same already-used, cheap music/<type>s/library_items and
+   music/recommendations commands on demand is a normal, low-cost
+   operation (nothing in this app treats them as rate-limited), so a
+   manual refresh gesture is a reasonable fit for the MA API. */
+(function wireLoungePullToRefresh() {
+  var PULL_THRESHOLD = 70;
+  var box = $('loungeBody');
+  var hint = $('loungePullHint');
+  var startY = null;
+  var pulling = false;
+  var dist = 0;
+  box.addEventListener('touchstart', function (e) {
+    if (box.scrollTop <= 0 && e.touches.length === 1) {
+      startY = e.touches[0].clientY;
+      pulling = true;
+      dist = 0;
+    } else {
+      pulling = false;
+    }
+  }, false);
+  box.addEventListener('touchmove', function (e) {
+    if (!pulling) { return; }
+    if (box.scrollTop > 0) { pulling = false; hint.style.opacity = 0; return; }
+    dist = e.touches[0].clientY - startY;
+    if (dist <= 0) { hint.style.opacity = 0; return; }
+    hint.style.opacity = Math.min(1, dist / PULL_THRESHOLD);
+    setText(hint, dist >= PULL_THRESHOLD ? t('lounge.releaseRefresh') : t('lounge.pullRefresh'));
+  }, false);
+  box.addEventListener('touchend', function () {
+    if (pulling && dist >= PULL_THRESHOLD) { refreshLoungeData(); }
+    pulling = false;
+    hint.style.opacity = 0;
+  }, false);
+})();
 
 /* ==================================================================
    START
