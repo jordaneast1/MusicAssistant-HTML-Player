@@ -1539,7 +1539,7 @@ html, body {
    pageshow for weeks - without the timer, the update check would be
    effectively dead.
    ================================================================== */
-var APP_VERSION = '2026-10-25.1';
+var APP_VERSION = '2026-11-15.1';
 var UPDATE_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 
 /* ==================================================================
@@ -1712,6 +1712,8 @@ var STRINGS = {
     "toast.playersUnavailable": "Players unavailable: {err}",
     "refresh.refreshing": "Refreshing…",
     "refresh.refreshed": "Up to date.",
+    "refresh.reconnecting": "Reconnecting to Music Assistant…",
+    "refresh.failed": "Refresh incomplete: {err}",
     "toast.favFailed": "Favorite failed: {err}",
     "toast.playlistsLoadFailed": "Could not load playlists: {err}",
     "toast.addFailed": "Failed to add: {err}",
@@ -1978,19 +1980,46 @@ function setDefaultSource(domain) {
 
 /* config/providers (provider_type: 'music') lists the server's actually
    configured/enabled music providers - used instead of hardcoding a
-   provider list, so this reflects whatever the user has set up. */
+   provider list, so this reflects whatever the user has set up. The
+   `providers` command (the server's currently loaded provider
+   instances) is queried in parallel and unioned in, so a provider that
+   was just added shows up even if one of the two lists lags behind or
+   one command isn't available on a given MA version. Only fails if
+   both requests fail. */
 function loadMusicSources(cb) {
-  send('config/providers', { provider_type: 'music' }, function (err, list) {
-    if (err) { cb(err, null); return; }
-    var seen = {}, out = [];
-    for (var i = 0; i < list.length; i++) {
-      var p = list[i];
-      if (!p || p.enabled === false || !p.domain || seen[p.domain]) { continue; }
-      seen[p.domain] = true;
-      out.push(p.domain);
-    }
+  var seen = {}, out = [], remaining = 2, errs = [];
+  function addDomain(d) {
+    if (!d || seen[d]) { return; }
+    seen[d] = true;
+    out.push(d);
+  }
+  function done(err) {
+    if (err) { errs.push(err); }
+    remaining -= 1;
+    if (remaining > 0) { return; }
+    if (errs.length === 2) { cb(errs[0], null); return; }
     out.sort(function (a, b) { return sourceLabel(a) < sourceLabel(b) ? -1 : 1; });
     cb(null, out);
+  }
+  send('config/providers', { provider_type: 'music' }, function (err, list) {
+    if (!err && list) {
+      for (var i = 0; i < list.length; i++) {
+        var p = list[i];
+        if (!p || p.enabled === false) { continue; }
+        addDomain(p.domain);
+      }
+    }
+    done(err || (list ? null : 'empty'));
+  });
+  send('providers', null, function (err, list) {
+    if (!err && list) {
+      for (var i = 0; i < list.length; i++) {
+        var p = list[i];
+        if (!p || p.type !== 'music') { continue; }
+        addDomain(p.domain);
+      }
+    }
+    done(err || (list ? null : 'empty'));
   });
 }
 
@@ -2625,9 +2654,18 @@ function loadPlayersAndQueues(cb) {
   });
 }
 
+var refreshAfterConnect = false;   /* set by refreshAllData() when it had to reconnect first */
+
 function bootstrap() {
-  refreshAvailableSources(); /* independent of players/queues - fires in parallel */
-  loadPlayersAndQueues();
+  var wantPageRefresh = refreshAfterConnect;
+  refreshAfterConnect = false;
+  /* independent of players/queues - fires in parallel */
+  refreshAvailableSources(function (err) {
+    if (!err && wantPageRefresh) { refreshCurrentPageData(); }
+  });
+  loadPlayersAndQueues(function (err) {
+    if (!err && wantPageRefresh) { refreshNowFav(); toast(t('refresh.refreshed')); }
+  });
 }
 
 /* Header "Refresh" button (#headerRefresh, next to Quick Actions) -
@@ -2641,20 +2679,78 @@ function bootstrap() {
    operation (see "Pull-to-refresh" on the Lounge page for the same
    reasoning), just triggered for the whole app instead of one page. */
 function refreshAllData() {
+  /* A dead/stale socket (common on an iPad that slept) would make every
+     request below fail silently - reconnect right away instead; the
+     reconnect's own bootstrap() reloads players/queues/providers. */
+  if (!ws || ws.readyState !== 1 || !wsAuthed) {
+    toast(t('refresh.reconnecting'));
+    backoff = 1000;
+    if (ws) { try { ws.onclose = null; ws.close(); } catch (e) { /* ignore */ } }
+    teardownSilently();
+    refreshAfterConnect = true;
+    connect();
+    return;
+  }
   toast(t('refresh.refreshing'));
-  refreshAvailableSources();
+  probeClock();
+  var remaining = 2, failed = null;
+  function done(err) {
+    if (err && !failed) { failed = err; }
+    remaining -= 1;
+    if (remaining > 0) { return; }
+    if (failed) { toast(t('refresh.failed', { err: failed }), true); }
+    else { toast(t('refresh.refreshed')); }
+  }
+  refreshAvailableSources(function (err) {
+    if (!err && settingsMenuOpen) { renderSettingsMenu(); }
+    /* The current page's lists may filter by source - re-render them
+       once the fresh provider list is in. */
+    if (!err) { refreshCurrentPageData(); }
+    done(err);
+  });
   loadPlayersAndQueues(function (err) {
-    if (err) { return; }
-    refreshCurrentPageData();
-    toast(t('refresh.refreshed'));
+    if (!err) {
+      refreshNowFav();
+      if (playlistSheetTarget && hasClass($('playlistSheetbg'), 'on')) {
+        loadUserPlaylists(function (e2) { if (!e2) { renderPlaylistList(false); } });
+      }
+    }
+    done(err);
   });
 }
 
+/* Clears pending callbacks/state of a socket we're deliberately
+   replacing, without scheduling the regular backoff reconnect. */
+function teardownSilently() {
+  wsOpen = false;
+  wsAuthed = false;
+  setLink(false);
+  var ids = [];
+  for (var k in pending) { if (pending.hasOwnProperty(k)) { ids.push(k); } }
+  for (var i = 0; i < ids.length; i++) {
+    var p = pending[ids[i]];
+    delete pending[ids[i]];
+    if (p.cb) { p.cb(t('toast.disconnected'), null); }
+  }
+}
+
 function refreshCurrentPageData() {
-  if (currentTab === 'lounge') { refreshLoungeData(); }
+  /* Lounge only reloads on its first visit (scroll preservation, see
+     loadLoungePage()) - mark it stale so the next visit refetches. */
+  if (currentTab !== 'lounge') { loungeLoaded = false; }
+  if (currentTab === 'lounge') { loadLoungePage(true); }
   else if (currentTab === 'radio') { loadRadioGrid(); }
-  else if (currentTab === 'library') { loadLibrary(currentLibType); }
-  else if (currentTab === 'search' && $('q').value) { doSearch(); }
+  else if (currentTab === 'library') { buildLibFilters(); loadLibrary(currentLibType); }
+  else if (currentTab === 'search') {
+    if (stack.length) {
+      /* Detail view (artist/album/playlist/...): drop its tab cache and
+         reload it in place, rather than doSearch() wiping the stack. */
+      var top = stack[stack.length - 1];
+      top.cache = {};
+      loadCrumbFav(top);
+      renderStack();
+    } else if ($('q').value) { doSearch(); }
+  }
 }
 
 function rebuildPlayerOrder() {
@@ -2847,6 +2943,14 @@ function handleEvent(msg) {
   }
   if (evt === 'queue_items_updated') {
     if (msg.object_id === activeQueueId && queuePanelOpen) { loadQueue(); }
+    return;
+  }
+  if (evt === 'providers_updated') {
+    /* A provider was added/removed/reloaded on the server - keep the
+       source chips (and an open Settings menu) in sync automatically. */
+    refreshAvailableSources(function (err) {
+      if (!err && settingsMenuOpen) { renderSettingsMenu(); }
+    });
     return;
   }
   if (evt === 'media_item_updated' || evt === 'media_item_added' || evt === 'media_item_deleted') {
@@ -3527,13 +3631,14 @@ function onPickLibrarySource(d) {
   loadLibrary(currentLibType);
 }
 
-function refreshAvailableSources() {
+function refreshAvailableSources(cb) {
   loadMusicSources(function (err, domains) {
-    if (err || !domains) { return; }
+    if (err || !domains) { if (cb) { cb(err || 'empty'); } return; }
     availableSourceDomains = domains;
     renderSourceFilters('sourceFilters', availableSourceDomains, searchSourceFilter, onPickSearchSource);
     renderSourceFilters('libSourceFilters', availableSourceDomains, librarySourceFilter, onPickLibrarySource);
     renderSourceFilters('loungeSourceFilters', availableSourceDomains, loungeSourceFilter, onPickLoungeSource);
+    if (cb) { cb(null); }
   });
 }
 
